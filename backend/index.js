@@ -590,6 +590,87 @@ app.post('/api/transactions', authenticateToken, (req, res) => {
   });
 });
 
+app.post('/api/transactions/bulk', authenticateToken, (req, res) => {
+  const { transactions } = req.body;
+  if (!Array.isArray(transactions) || transactions.length === 0) {
+    return res.status(400).json({ error: 'No transactions provided' });
+  }
+
+  db.get("SELECT start_date, end_date FROM fiscal_years WHERE is_current = 1", [], (err, activeFy) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!activeFy) return res.status(400).json({ error: 'No active fiscal year found' });
+
+    db.serialize(() => {
+      db.run("BEGIN TRANSACTION");
+      let hasError = false;
+      let errorMessage = '';
+
+      const checkDuplicateStmt = db.prepare("SELECT id FROM transactions WHERE sn = ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?");
+      const insertTxStmt = db.prepare(`INSERT INTO transactions (sn, date, final_description, created_by, modified_by, modified_at) VALUES (?, ?, ?, ?, ?, ?)`);
+      const insertLineStmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
+
+      const modified_at = new Date().toISOString();
+
+      const processTransactions = async () => {
+        try {
+          for (const tx of transactions) {
+            const txDateStr = tx.date.split(' ')[0];
+            if (txDateStr < activeFy.start_date || txDateStr > activeFy.end_date) {
+              throw new Error(`Transaction ${tx.sn} date is out of active fiscal year.`);
+            }
+
+            const row = await new Promise((resolve, reject) => {
+               checkDuplicateStmt.get([tx.sn, activeFy.start_date, activeFy.end_date], (err, row) => {
+                   if (err) reject(err);
+                   else resolve(row);
+               });
+            });
+
+            if (row) {
+              throw new Error(`Duplicate voucher Number: ${tx.sn}`);
+            }
+
+            const txId = await new Promise((resolve, reject) => {
+                insertTxStmt.run([tx.sn, tx.date, tx.final_description || '', req.user.name, req.user.name, modified_at], function(err) {
+                    if (err) reject(err);
+                    else resolve(this.lastID);
+                });
+            });
+
+            for (const line of tx.lines) {
+              await new Promise((resolve, reject) => {
+                insertLineStmt.run([txId, line.code_number, line.type, line.amount], (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                });
+              });
+            }
+          }
+        } catch (e) {
+          hasError = true;
+          errorMessage = e.message;
+        }
+      };
+
+      processTransactions().then(() => {
+        checkDuplicateStmt.finalize();
+        insertTxStmt.finalize();
+        insertLineStmt.finalize();
+
+        if (hasError) {
+          db.run("ROLLBACK");
+          return res.status(400).json({ error: errorMessage });
+        } else {
+          db.run("COMMIT", (err) => {
+            if (err) return res.status(500).json({ error: "Commit failed" });
+            res.json({ success: true, message: \`Successfully posted \${transactions.length} vouchers.\` });
+          });
+        }
+      });
+    });
+  });
+});
+
 app.get('/api/transactions/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   db.get("SELECT * FROM transactions WHERE id = ?", [id], (err, tx) => {
