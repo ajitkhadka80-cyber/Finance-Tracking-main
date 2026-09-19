@@ -125,8 +125,13 @@ export default function ViewTransactions() {
 
     const openViewModal = (tx) => {
         setViewTx(tx);
-        // Deep copy lines for editing
-        setViewTxLines(JSON.parse(JSON.stringify(tx.lines)));
+        // Deep copy lines for editing and sort Dr first
+        const sortedLines = JSON.parse(JSON.stringify(tx.lines)).sort((a, b) => {
+            if (a.type === 'Dr' && b.type === 'Cr') return -1;
+            if (a.type === 'Cr' && b.type === 'Dr') return 1;
+            return 0;
+        });
+        setViewTxLines(sortedLines);
     };
 
     const closeViewModal = () => {
@@ -224,6 +229,12 @@ export default function ViewTransactions() {
 
 
 
+        const sortedPrintLines = [...tx.lines].sort((a, b) => {
+            if (a.type === 'Dr' && b.type === 'Cr') return -1;
+            if (a.type === 'Cr' && b.type === 'Dr') return 1;
+            return 0;
+        });
+
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
         <html>
@@ -275,7 +286,7 @@ export default function ViewTransactions() {
                   </tr>
                 </thead>
                 <tbody>
-                  ${tx.lines.map(l => `
+                  ${sortedPrintLines.map(l => `
                     <tr class="inner-row">
                       <td>${dNum(l.code_number)}</td>
                       <td>${getCodeDescription(l.code_number)}</td>
