@@ -50,11 +50,11 @@ app.post('/api/login', (req, res) => {
     db.run("UPDATE users SET last_logged_in = ? WHERE id = ?", [now, user.id]);
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, name: user.name, role: user.role }, 
-      JWT_SECRET, 
+      { id: user.id, email: user.email, name: user.name, role: user.role },
+      JWT_SECRET,
       { expiresIn: '2h' }
     );
-    
+
     const { password: _, ...userInfo } = user;
     userInfo.last_logged_in = now;
     res.json({ token, user: userInfo });
@@ -105,7 +105,7 @@ app.post('/api/codes/bulk', authenticateToken, requireAdmin, (req, res) => {
   db.serialize(() => {
     db.run("BEGIN TRANSACTION");
     const stmt = db.prepare(`INSERT INTO codes (code_number, description, classification) VALUES (?, ?, ?) ON CONFLICT(code_number) DO UPDATE SET description = excluded.description, classification = excluded.classification`);
-    
+
     let hasError = false;
     for (const code of codes) {
       if (!code.code_number || !code.description || !code.classification) continue;
@@ -141,7 +141,7 @@ app.put('/api/codes/:number', authenticateToken, requireAdmin, (req, res) => {
 
 app.delete('/api/codes/:number', authenticateToken, requireAdmin, (req, res) => {
   const { number } = req.params;
-  db.run(`DELETE FROM codes WHERE code_number = ?`, [number], function(err) {
+  db.run(`DELETE FROM codes WHERE code_number = ?`, [number], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, message: 'Code deleted' });
   });
@@ -160,9 +160,9 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
   if (!name || !email || !role || !password) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  
+
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt); 
+  const hashedPassword = await bcrypt.hash(password, salt);
 
   db.run(`INSERT INTO users (name, email, password, role, last_logged_in) VALUES (?, ?, ?, ?, ?)`,
     [name, email, hashedPassword, role, 'Never'],
@@ -176,14 +176,14 @@ app.post('/api/users', authenticateToken, requireAdmin, async (req, res) => {
 app.post('/api/forgot-password', (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
-  
+
   db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!user) {
       // Don't leak whether email exists
       return res.json({ success: true, message: 'If the email exists, a reset request was sent to the admin.' });
     }
-    
+
     db.run("INSERT INTO password_reset_requests (email) VALUES (?)", [email], (err) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true, message: 'Password reset request sent to admin.' });
@@ -201,15 +201,15 @@ app.get('/api/password-reset-requests', authenticateToken, requireAdmin, (req, r
 app.put('/api/users/:id/reset-password', authenticateToken, requireAdmin, async (req, res) => {
   const { newPassword, requestId } = req.body;
   const { id } = req.params;
-  
+
   if (!newPassword) return res.status(400).json({ error: 'New password required' });
-  
+
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(newPassword, salt);
-  
+
   db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, id], (err) => {
     if (err) return res.status(500).json({ error: err.message });
-    
+
     if (requestId) {
       db.run("UPDATE password_reset_requests SET status = 'resolved' WHERE id = ?", [requestId]);
     }
@@ -220,16 +220,16 @@ app.put('/api/users/:id/reset-password', authenticateToken, requireAdmin, async 
 app.put('/api/users/change-password', authenticateToken, async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   if (!oldPassword || !newPassword) return res.status(400).json({ error: 'Missing passwords' });
-  
+
   db.get("SELECT * FROM users WHERE id = ?", [req.user.id], async (err, user) => {
     if (err) return res.status(500).json({ error: err.message });
-    
+
     const validPassword = await bcrypt.compare(oldPassword, user.password);
     if (!validPassword) return res.status(401).json({ error: 'Incorrect current password' });
-    
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
-    
+
     db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, req.user.id], (err) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true, message: 'Password updated successfully' });
@@ -305,7 +305,7 @@ app.get('/api/settings', (req, res) => {
 
 app.put('/api/settings', authenticateToken, requireAdmin, (req, res) => {
   const { org_name, org_address, currency, receipt_language } = req.body;
-  
+
   const updates = [];
   if (org_name !== undefined) updates.push(['org_name', org_name]);
   if (org_address !== undefined) updates.push(['org_address', org_address]);
@@ -321,7 +321,7 @@ app.put('/api/settings', authenticateToken, requireAdmin, (req, res) => {
     let hasError = false;
 
     const stmt = db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value");
-    
+
     for (const [key, val] of updates) {
       stmt.run(key, val, (err) => {
         if (err) hasError = true;
@@ -341,24 +341,24 @@ app.get('/api/public/stats', (req, res) => {
   // Returns aggregated, anonymous stats for the login page charts
   db.all("SELECT * FROM transactions", [], (err, txs) => {
     if (err) return res.status(500).json({ error: err.message });
-    
+
     db.all("SELECT * FROM transaction_lines", [], (err, lines) => {
       if (err) return res.status(500).json({ error: err.message });
 
       // Group by YYYY-MM
       const monthlyStats = {};
-      
+
       txs.forEach(tx => {
         if (!tx.date) return;
         const month = tx.date.substring(0, 7); // e.g. "2026-09"
         if (!monthlyStats[month]) {
           monthlyStats[month] = { netWorth: 0, income: 0, expense: 0 };
         }
-        
+
         const txLines = lines.filter(l => l.transaction_id === tx.id);
         const dr = txLines.filter(l => l.type === 'Dr').reduce((s, l) => s + l.amount, 0);
         const cr = txLines.filter(l => l.type === 'Cr').reduce((s, l) => s + l.amount, 0);
-        
+
         // Simplified heuristic: Cr is income/liability, Dr is expense/asset
         // We'll just map Dr to Expense and Cr to Income for the visual chart
         monthlyStats[month].expense += dr;
@@ -398,7 +398,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
     if (!fy) return res.status(404).json({ error: 'No fiscal year covers the selected date' });
 
     const startDate = fy.start_date; // e.g. "2077-03-01"
-    const cutoffDate = date; 
+    const cutoffDate = date;
 
     // Fetch all codes
     db.all("SELECT * FROM codes ORDER BY code_number ASC", [], (err, codes) => {
@@ -422,12 +422,12 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
         for (const code of codes) {
           let dr = 0;
           let cr = 0;
-          
+
           const isIncomeOrExpenditure = code.classification.toLowerCase().includes('income') || code.classification.toLowerCase().includes('expenditure');
 
           // Filter lines for this code
           const codeLines = lines.filter(l => l.code_number === code.code_number);
-          
+
           for (const line of codeLines) {
             if (isIncomeOrExpenditure) {
               // Only consider lines within the selected fiscal year
@@ -447,7 +447,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
           let displayCr = 0;
 
           const classification = code.classification.toLowerCase();
-          
+
           if (classification.includes('asset') || classification.includes('expenditure')) {
             balance = dr - cr;
             if (balance > 0) displayDr = balance;
@@ -487,7 +487,7 @@ app.get('/api/transactions', authenticateToken, (req, res) => {
   // Fetch transactions and their lines
   db.all("SELECT * FROM transactions ORDER BY id DESC", [], (err, txs) => {
     if (err) return res.status(500).json({ error: err.message });
-    
+
     if (txs.length === 0) return res.json([]);
 
     db.all("SELECT * FROM transaction_lines", [], (err, lines) => {
@@ -497,7 +497,7 @@ app.get('/api/transactions', authenticateToken, (req, res) => {
         const txLines = lines.filter(l => l.transaction_id === tx.id);
         const totalDr = txLines.filter(l => l.type === 'Dr').reduce((sum, l) => sum + l.amount, 0);
         const totalCr = txLines.filter(l => l.type === 'Cr').reduce((sum, l) => sum + l.amount, 0);
-        
+
         return {
           ...tx,
           lines: txLines,
@@ -512,11 +512,11 @@ app.get('/api/transactions', authenticateToken, (req, res) => {
 
 app.get('/api/ledger/:code', authenticateToken, (req, res) => {
   const codeNumber = req.params.code;
-  
+
   db.get("SELECT * FROM codes WHERE code_number = ?", [codeNumber], (err, codeRow) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!codeRow) return res.status(404).json({ error: 'Code not found' });
-    
+
     const query = `
       SELECT t.date, t.sn, t.final_description, tl.type, tl.amount 
       FROM transaction_lines tl
@@ -524,10 +524,10 @@ app.get('/api/ledger/:code', authenticateToken, (req, res) => {
       WHERE tl.code_number = ?
       ORDER BY t.date ASC, t.id ASC
     `;
-    
+
     db.all(query, [codeNumber], (err, lines) => {
       if (err) return res.status(500).json({ error: err.message });
-      
+
       res.json({
         code: codeRow,
         transactions: lines
@@ -550,7 +550,7 @@ app.post('/api/transactions', authenticateToken, (req, res) => {
     if (txDateStr < activeFy.start_date || txDateStr > activeFy.end_date) {
       return res.status(400).json({ error: 'Transactions can only be posted in the active fiscal year' });
     }
-    
+
     let duplicateQuery = "SELECT id FROM transactions WHERE sn = ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?";
     let duplicateParams = [sn, activeFy.start_date, activeFy.end_date];
 
@@ -568,17 +568,17 @@ app.post('/api/transactions', authenticateToken, (req, res) => {
               db.run("ROLLBACK");
               return res.status(500).json({ error: err.message });
             }
-            
+
             const txId = this.lastID;
             const stmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
-            
+
             for (const line of lines) {
               stmt.run(txId, line.code_number, line.type, line.amount, (err) => {
-                 if (err) console.error("Error inserting line:", err);
+                if (err) console.error("Error inserting line:", err);
               });
             }
             stmt.finalize();
-            
+
             db.run("COMMIT", (err) => {
               if (err) return res.status(500).json({ error: "Commit failed" });
               res.json({ success: true, transaction_id: txId });
@@ -620,10 +620,10 @@ app.post('/api/transactions/bulk', authenticateToken, (req, res) => {
             }
 
             const row = await new Promise((resolve, reject) => {
-               checkDuplicateStmt.get([tx.sn, activeFy.start_date, activeFy.end_date], (err, row) => {
-                   if (err) reject(err);
-                   else resolve(row);
-               });
+              checkDuplicateStmt.get([tx.sn, activeFy.start_date, activeFy.end_date], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+              });
             });
 
             if (row) {
@@ -631,10 +631,10 @@ app.post('/api/transactions/bulk', authenticateToken, (req, res) => {
             }
 
             const txId = await new Promise((resolve, reject) => {
-                insertTxStmt.run([tx.sn, tx.date, tx.final_description || '', req.user.name, req.user.name, modified_at], function(err) {
-                    if (err) reject(err);
-                    else resolve(this.lastID);
-                });
+              insertTxStmt.run([tx.sn, tx.date, tx.final_description || '', req.user.name, req.user.name, modified_at], function (err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+              });
             });
 
             for (const line of tx.lines) {
@@ -663,7 +663,7 @@ app.post('/api/transactions/bulk', authenticateToken, (req, res) => {
         } else {
           db.run("COMMIT", (err) => {
             if (err) return res.status(500).json({ error: "Commit failed" });
-            res.json({ success: true, message: \`Successfully posted \${transactions.length} vouchers.\` });
+            res.json({ success: true, message: `Successfully posted ${transactions.length} vouchers.` });
           });
         }
       });
@@ -676,13 +676,13 @@ app.get('/api/transactions/:id', authenticateToken, (req, res) => {
   db.get("SELECT * FROM transactions WHERE id = ?", [id], (err, tx) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!tx) return res.status(404).json({ error: 'Transaction not found' });
-    
+
     db.all("SELECT * FROM transaction_lines WHERE transaction_id = ?", [id], (err, lines) => {
       if (err) return res.status(500).json({ error: err.message });
-      
+
       const totalDr = lines.filter(l => l.type === 'Dr').reduce((sum, l) => sum + l.amount, 0);
       const totalCr = lines.filter(l => l.type === 'Cr').reduce((sum, l) => sum + l.amount, 0);
-      
+
       res.json({
         ...tx,
         lines,
@@ -708,7 +708,7 @@ app.put('/api/transactions/:id', authenticateToken, (req, res) => {
     if (txDateStr < activeFy.start_date || txDateStr > activeFy.end_date) {
       return res.status(400).json({ error: 'Transactions can only be posted in the active fiscal year' });
     }
-    
+
     let duplicateQuery = "SELECT id FROM transactions WHERE sn = ? AND id != ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?";
     let duplicateParams = [sn, id, activeFy.start_date, activeFy.end_date];
 
@@ -726,25 +726,25 @@ app.put('/api/transactions/:id', authenticateToken, (req, res) => {
               db.run("ROLLBACK");
               return res.status(500).json({ error: err.message });
             }
-            
-            db.run("DELETE FROM transaction_lines WHERE transaction_id = ?", [id], function (err) {
-                if (err) {
-                    db.run("ROLLBACK");
-                    return res.status(500).json({ error: err.message });
-                }
 
-                const stmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
-                for (const line of lines) {
-                  stmt.run(id, line.code_number, line.type, line.amount, (err) => {
-                     if (err) console.error("Error inserting line:", err);
-                  });
-                }
-                stmt.finalize();
-                
-                db.run("COMMIT", (err) => {
-                  if (err) return res.status(500).json({ error: "Commit failed" });
-                  res.json({ success: true, transaction_id: id });
+            db.run("DELETE FROM transaction_lines WHERE transaction_id = ?", [id], function (err) {
+              if (err) {
+                db.run("ROLLBACK");
+                return res.status(500).json({ error: err.message });
+              }
+
+              const stmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
+              for (const line of lines) {
+                stmt.run(id, line.code_number, line.type, line.amount, (err) => {
+                  if (err) console.error("Error inserting line:", err);
                 });
+              }
+              stmt.finalize();
+
+              db.run("COMMIT", (err) => {
+                if (err) return res.status(500).json({ error: "Commit failed" });
+                res.json({ success: true, transaction_id: id });
+              });
             });
           }
         );
@@ -755,7 +755,7 @@ app.put('/api/transactions/:id', authenticateToken, (req, res) => {
 
 app.delete('/api/transactions/:id', authenticateToken, requireAdmin, (req, res) => {
   const { id } = req.params;
-  
+
   db.serialize(() => {
     db.run("BEGIN TRANSACTION");
     db.run("DELETE FROM transaction_lines WHERE transaction_id = ?", [id], function (err) {
@@ -763,13 +763,13 @@ app.delete('/api/transactions/:id', authenticateToken, requireAdmin, (req, res) 
         db.run("ROLLBACK");
         return res.status(500).json({ error: err.message });
       }
-      
+
       db.run("DELETE FROM transactions WHERE id = ?", [id], function (err) {
         if (err) {
           db.run("ROLLBACK");
           return res.status(500).json({ error: err.message });
         }
-        
+
         db.run("COMMIT", (err) => {
           if (err) return res.status(500).json({ error: "Commit failed" });
           res.json({ success: true, message: 'Transaction deleted successfully' });
