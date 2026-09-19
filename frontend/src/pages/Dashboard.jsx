@@ -8,6 +8,14 @@ export default function Dashboard() {
   const [transactions, setTransactions] = useState([]);
   const { token, user } = useContext(AuthContext);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good night';
+  };
+
   useEffect(() => {
     fetch('/api/transactions', {
       headers: { 'Authorization': `Bearer ${token}` }
@@ -23,7 +31,7 @@ export default function Dashboard() {
           {/*  Header Greeting & Action Bar  */}
           <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Good morning, {user?.name?.split(' ')[0] || 'Alex'}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{getGreeting()}, {user?.name?.split(' ')[0] || 'Alex'}</h1>
               <p className="text-sm sm:text-base text-slate-500 mt-1">Here is your financial summary for this month.</p>
             </div>
             <div className="flex items-center justify-end">

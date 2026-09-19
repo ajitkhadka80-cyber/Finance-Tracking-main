@@ -69,14 +69,34 @@ export default function LoginForm() {
 
     return (
         <div className="backdrop-blur-xl bg-white/70 border border-white/40 p-8 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] w-full relative z-10">
-            <div className="mb-8 text-center">
-                <div className="flex justify-center mb-5">
-                    <img src="/logo.jpg" alt="Logo" className="h-24 object-contain drop-shadow-md hover:scale-105 transition-transform duration-300" />
+            <div className="mb-8">
+                <div className="flex items-center mb-4">
+                    <div className="flex-shrink-0 mr-4">
+                        <img src="/logo.jpg" alt="Logo" className="h-16 sm:h-20 object-contain drop-shadow-md hover:scale-105 transition-transform duration-300" />
+                    </div>
+                    <div className="flex-1 flex justify-center items-center">
+                        {orgName ? (
+                            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 text-center leading-tight">
+                                {orgName}
+                            </h1>
+                        ) : receiptLanguage === 'english' ? (
+                            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0070C0] text-center leading-tight">
+                                DIYO SAVING AND CREDIT COOPERATIVE LIMITED
+                            </h1>
+                        ) : (
+                            <div className="flex items-stretch">
+                                <div className="bg-[#0070C0] px-2 sm:px-3 py-1 flex items-center justify-center">
+                                    <span className="text-[#FFC000] text-3xl sm:text-4xl font-bold leading-none" style={{ fontFamily: 'sans-serif' }}>दियो</span>
+                                </div>
+                                <div className="flex flex-col justify-center pl-2 sm:pl-3 text-[#0070C0]">
+                                    <span className="text-sm sm:text-base font-bold leading-tight">वचत तथा ऋण सहकारी संस्था लिमिटेड</span>
+                                    <span className="text-xs sm:text-sm font-bold leading-tight mt-0.5 text-center">चाल्नाखेल काठमाडौं</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
-                    {orgName || (receiptLanguage === 'english' ? 'DIYO SAVING AND CREDIT COOPERATIVE LIMITED' : 'दियो वचत तथा ऋण सहकारी संस्था लिमिटेड')}
-                </h1>
-                <p className="text-sm text-slate-500 mt-2 font-medium">Welcome back! Please enter your details.</p>
+                <p className="text-sm text-slate-500 mt-2 font-medium text-center">Welcome back! Please enter your details.</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-5">

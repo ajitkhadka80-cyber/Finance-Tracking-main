@@ -9,6 +9,7 @@ import Settings from './pages/Settings';
 import ChangePassword from './pages/ChangePassword';
 import Ledger from './pages/Ledger';
 import LedgerDetail from './pages/LedgerDetail';
+import TrialBalance from './pages/TrialBalance';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -95,6 +96,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <LedgerDetail />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/reports/trial-balance" 
+            element={
+              <ProtectedRoute>
+                <TrialBalance />
               </ProtectedRoute>
             } 
           />

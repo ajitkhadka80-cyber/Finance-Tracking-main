@@ -2,10 +2,11 @@ import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 export default function Transactions() {
-  const { token, currency } = useContext(AuthContext);
+  const { token, currency, user } = useContext(AuthContext);
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
@@ -115,6 +116,54 @@ export default function Transactions() {
   const removeLine = (index) => {
     const newLines = lines.filter((_, i) => i !== index);
     setLines(newLines);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+        
+        if (data.length === 0) {
+          Swal.fire('Error', 'Excel file is empty', 'error');
+          return;
+        }
+
+        const newLines = data.map(row => {
+          const code_number = (row.Code || row.code || '').toString().trim();
+          const dr_amount = row.Debit || row.debit || row.Dr || row.dr || '';
+          const cr_amount = row.Credit || row.credit || row.Cr || row.cr || '';
+          
+          let description = '';
+          const foundCode = cachedCodes.find(c => c.code_number.toString() === code_number);
+          if (foundCode) {
+            description = foundCode.description;
+          }
+
+          return {
+            code_number,
+            description,
+            dr_amount: dr_amount.toString(),
+            cr_amount: cr_amount.toString()
+          };
+        });
+
+        setLines(newLines);
+        Swal.fire('Success', `Loaded ${newLines.length} lines from Excel`, 'success');
+      } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Failed to parse Excel file. Please ensure it matches the sample format.', 'error');
+      }
+      e.target.value = ''; // Reset input
+    };
+    reader.readAsBinaryString(file);
   };
 
   const handleSubmit = async (e) => {
@@ -264,13 +313,29 @@ export default function Transactions() {
 
   return (
     <main className="w-full p-4 md:p-6 lg:px-8 max-w-[1600px] mx-auto min-h-screen">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">
-             {isEdit ? 'Edit Journal Entry' : isReverse ? 'Reverse Journal Entry' : 'Create Journal Entry'}
-          </h1>
-          <p className="text-slate-500">
-             {isEdit ? 'Modify an existing transaction.' : isReverse ? 'Record a reversal transaction.' : 'Record a new financial transaction into the ledger.'}
-          </p>
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">
+               {isEdit ? 'Edit Journal Entry' : isReverse ? 'Reverse Journal Entry' : 'Create Journal Entry'}
+            </h1>
+            <p className="text-slate-500">
+               {isEdit ? 'Modify an existing transaction.' : isReverse ? 'Record a reversal transaction.' : 'Record a new financial transaction into the ledger.'}
+            </p>
+          </div>
+          
+          {user?.role === 'admin' && !isEdit && !isReverse && (
+            <div className="flex items-center gap-3">
+              <a href="/sample_voucher.xlsx" download className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                Sample Excel
+              </a>
+              <label className="cursor-pointer px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 border border-indigo-200">
+                <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                Upload Excel
+                <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleFileUpload} />
+              </label>
+            </div>
+          )}
         </div>
         
         {!hasCodes ? (

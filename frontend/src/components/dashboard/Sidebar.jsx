@@ -123,11 +123,11 @@ export default function Sidebar() {
                     <span>Ledger</span>
                   </Link>
                   <Link
-                    to="/reports/trial"
-                    className={`flex items-center gap-3 px-11 py-2 text-[12px] transition-colors ${location.pathname === '/reports/trial' ? 'text-yellow-400 font-semibold' : 'text-slate-300 hover:text-white'}`}
+                    to="/reports/trial-balance"
+                    className={`flex items-center gap-3 px-11 py-2 text-[12px] transition-colors ${location.pathname === '/reports/trial-balance' ? 'text-yellow-400 font-semibold' : 'text-slate-300 hover:text-white'}`}
                   >
                     <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
-                    <span>Trial</span>
+                    <span>Trial Balance</span>
                   </Link>
                 </div>
               )}

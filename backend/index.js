@@ -384,6 +384,103 @@ app.get('/api/public/stats', (req, res) => {
     });
   });
 });
+// === REPORTS ===
+app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
+  const { date } = req.query;
+
+  if (!date) {
+    return res.status(400).json({ error: 'date is required' });
+  }
+
+  // Get fiscal year details
+  db.get("SELECT * FROM fiscal_years WHERE start_date <= ? AND end_date >= ?", [date, date], (err, fy) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!fy) return res.status(404).json({ error: 'No fiscal year covers the selected date' });
+
+    const startDate = fy.start_date; // e.g. "2077-03-01"
+    const cutoffDate = date; 
+
+    // Fetch all codes
+    db.all("SELECT * FROM codes ORDER BY code_number ASC", [], (err, codes) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      // Fetch all transactions up to cutoff date
+      const txQuery = `
+        SELECT t.date, tl.code_number, tl.type, tl.amount 
+        FROM transaction_lines tl
+        JOIN transactions t ON tl.transaction_id = t.id
+        WHERE t.date <= ?
+      `;
+
+      db.all(txQuery, [cutoffDate], (err, lines) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const trialBalance = [];
+        let totalDr = 0;
+        let totalCr = 0;
+
+        for (const code of codes) {
+          let dr = 0;
+          let cr = 0;
+          
+          const isIncomeOrExpenditure = code.classification.toLowerCase().includes('income') || code.classification.toLowerCase().includes('expenditure');
+
+          // Filter lines for this code
+          const codeLines = lines.filter(l => l.code_number === code.code_number);
+          
+          for (const line of codeLines) {
+            if (isIncomeOrExpenditure) {
+              // Only consider lines within the selected fiscal year
+              if (line.date >= startDate && line.date <= cutoffDate) {
+                if (line.type === 'Dr') dr += line.amount;
+                if (line.type === 'Cr') cr += line.amount;
+              }
+            } else {
+              // Assets and Liabilities take cumulative from start of time up to cutoff
+              if (line.type === 'Dr') dr += line.amount;
+              if (line.type === 'Cr') cr += line.amount;
+            }
+          }
+
+          let balance = 0;
+          let displayDr = 0;
+          let displayCr = 0;
+
+          const classification = code.classification.toLowerCase();
+          
+          if (classification.includes('asset') || classification.includes('expenditure')) {
+            balance = dr - cr;
+            if (balance > 0) displayDr = balance;
+            else if (balance < 0) displayCr = Math.abs(balance);
+          } else {
+            balance = cr - dr;
+            if (balance > 0) displayCr = balance;
+            else if (balance < 0) displayDr = Math.abs(balance);
+          }
+
+          if (balance !== 0) {
+            trialBalance.push({
+              code: code.code_number,
+              description: code.description,
+              classification: code.classification,
+              debit: displayDr,
+              credit: displayCr
+            });
+            totalDr += displayDr;
+            totalCr += displayCr;
+          }
+        }
+
+        res.json({
+          data: trialBalance,
+          totalDebit: totalDr,
+          totalCredit: totalCr,
+          fiscalYear: fy
+        });
+      });
+    });
+  });
+});
 
 // === TRANSACTIONS ===
 app.get('/api/transactions', authenticateToken, (req, res) => {

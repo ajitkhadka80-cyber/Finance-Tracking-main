@@ -78,104 +78,128 @@ export default function DashboardCharts({ transactions = [] }) {
 
     return (
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/*  Left: Member Info Card (8 cols)  */}
-            <div className="lg:col-span-8 bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6 h-[462px] flex flex-col">
-                <div>
-                    <h2 className="text-lg font-bold text-slate-900">Member Info</h2>
-                    <p className="text-sm text-slate-500">Demographic overview of registered members</p>
+            {/*  Left: Cash Flow Chart (8 cols)  */}
+            <div className="lg:col-span-8 bg-white rounded-xl p-6 border border-slate-200 shadow-sm flex flex-col h-auto min-h-[462px]">
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-900">Cash Flow</h2>
+                        <p className="text-sm text-slate-500">Income vs Expenses over the last {timeframe} months</p>
+                    </div>
+                    <div className="flex gap-4">
+                        <div className="flex flex-col items-end">
+                            <span className="text-xs font-semibold text-slate-400 uppercase">Avg Income</span>
+                            <span className="text-indigo-600 font-bold">{incomeAvg}</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <span className="text-xs font-semibold text-slate-400 uppercase">Avg Expense</span>
+                            <span className="text-rose-500 font-bold">{expenseAvg}</span>
+                        </div>
+                    </div>
                 </div>
-                
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4">
-                    {/* Total Members */}
-                    <div className="flex flex-col items-center justify-center bg-indigo-50/50 rounded-2xl border border-indigo-100 p-6">
-                        <div className="w-14 h-14 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-4">
-                            <span className="material-symbols-outlined text-[28px]">groups</span>
-                        </div>
-                        <h3 className="text-slate-500 font-medium text-sm mb-1 uppercase tracking-wider">Total Members</h3>
-                        <p className="text-4xl font-extrabold text-slate-900">0</p>
-                    </div>
+                <div className="flex-1 relative w-full h-full mt-4 flex flex-col min-h-[250px]">
+                    <div className="flex-1 relative">
+                        <svg className="w-full h-full overflow-visible" viewBox="0 0 700 210" preserveAspectRatio="none">
+                            {/* Grid lines */}
+                            <line x1="0" y1="20" x2="700" y2="20" stroke="#F1F5F9" strokeWidth="2" strokeDasharray="6 6" />
+                            <line x1="0" y1="115" x2="700" y2="115" stroke="#F1F5F9" strokeWidth="2" strokeDasharray="6 6" />
+                            <line x1="0" y1="210" x2="700" y2="210" stroke="#F1F5F9" strokeWidth="2" strokeDasharray="6 6" />
 
-                    {/* Male Members */}
-                    <div className="flex flex-col items-center justify-center bg-sky-50/50 rounded-2xl border border-sky-100 p-6">
-                        <div className="w-14 h-14 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mb-4">
-                            <span className="material-symbols-outlined text-[28px]">man</span>
-                        </div>
-                        <h3 className="text-slate-500 font-medium text-sm mb-1 uppercase tracking-wider">Male Members</h3>
-                        <p className="text-4xl font-extrabold text-slate-900">0</p>
-                    </div>
+                            {/* Chart lines */}
+                            <path d={incomePath} fill="none" stroke="#6366F1" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-md" />
+                            <path d={expensePath} fill="none" stroke="#F43F5E" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="drop-shadow-md" />
 
-                    {/* Female Members */}
-                    <div className="flex flex-col items-center justify-center bg-pink-50/50 rounded-2xl border border-pink-100 p-6">
-                        <div className="w-14 h-14 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mb-4">
-                            <span className="material-symbols-outlined text-[28px]">woman</span>
-                        </div>
-                        <h3 className="text-slate-500 font-medium text-sm mb-1 uppercase tracking-wider">Female Members</h3>
-                        <p className="text-4xl font-extrabold text-slate-900">0</p>
+                            {/* Active points */}
+                            {chartData.length > 0 && (
+                                <>
+                                    <circle cx={activeCx} cy={activeIncomeCy} r="5" fill="#fff" stroke="#6366F1" strokeWidth="3" />
+                                    <circle cx={activeCx} cy={activeExpenseCy} r="5" fill="#fff" stroke="#F43F5E" strokeWidth="3" />
+                                </>
+                            )}
+                        </svg>
                     </div>
+                    {xLabels}
                 </div>
             </div>
 
-            {/*  Right: Financial Health Score Card (4 cols)  */}
-            <div className="lg:col-span-4 bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-slate-900">Financial Health</h2>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">Excellent</span>
+            {/*  Right: Member Info Card (4 cols)  */}
+            <div className="lg:col-span-4 bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-6 h-auto min-h-[462px] flex flex-col">
+                <div>
+                    <h2 className="text-lg font-bold text-slate-900">Member Info</h2>
+                    <p className="text-sm text-slate-500">Demographic overview</p>
                 </div>
-                {/*  Circular Gauge Indicator  */}
-                <div className="flex flex-col items-center justify-center py-2 relative">
-                    <div className="relative w-40 h-40 flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                            <circle cx="60" cy="60" fill="transparent" r="48" stroke="#F1F5F9" strokeWidth="8"></circle>
-                            <circle cx="60" cy="60" fill="transparent" r="48" stroke="url(#healthScoreGrad)" strokeDasharray="301.6" strokeDashoffset="54.3" strokeLinecap="round" strokeWidth="8"></circle>
-                            <defs>
-                                <linearGradient id="healthScoreGrad" x1="0" x2="1" y1="0" y2="1">
-                                    <stop offset="0%" stopColor="#6366F1"></stop>
-                                    <stop offset="100%" stopColor="#10B981"></stop>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span className="text-4xl font-extrabold text-slate-900 tracking-tight">82</span>
-                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide mt-0.5">Score / 100</span>
+
+                <div className="flex-1 flex flex-col gap-4 pt-2">
+                    {/* जम्मा सदस्य */}
+                    <div className="flex flex-col bg-indigo-50/50 rounded-2xl border border-indigo-100 p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[20px]">groups</span>
+                            </div>
+                            <h3 className="text-slate-700 font-semibold text-sm">जम्मा सदश्य संख्याs</h3>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-indigo-100">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Up to Last FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Current FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-indigo-600">Total</span>
+                                <span className="text-lg font-extrabold text-indigo-700 leading-none mt-0.5">0</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                {/*  3 Simplified Progress Bars  */}
-                <div className="space-y-4 pt-1">
-                    <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="font-medium text-slate-600">Savings Rate</span>
-                            <span className="font-semibold text-slate-900 font-mono">49%</span>
+
+                    {/*पुरुष */}
+                    <div className="flex flex-col bg-sky-50/50 rounded-2xl border border-sky-100 p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[20px]">man</span>
+                            </div>
+                            <h3 className="text-slate-700 font-semibold text-sm">पुरुष</h3>
                         </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-emerald-500 h-full rounded-full" style={{ width: '49%' }}></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="font-medium text-slate-600">Debt-to-Income</span>
-                            <span className="font-semibold text-slate-900 font-mono">25%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-indigo-500 h-full rounded-full" style={{ width: '25%' }}></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="font-medium text-slate-600">Emergency Fund</span>
-                            <span className="font-semibold text-slate-900 font-mono">6.2 months</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                            <div className="bg-indigo-600 h-full rounded-full" style={{ width: '78%' }}></div>
+                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-sky-100">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Up to Last FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Current FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-sky-600">Total</span>
+                                <span className="text-lg font-extrabold text-sky-700 leading-none mt-0.5">0</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-                {/*  Helpful Human Advice  */}
-                <div className="rounded-lg bg-indigo-50/70 border border-indigo-100 p-3.5 flex items-start gap-2.5">
-                    <span className="material-symbols-outlined text-indigo-600 text-[18px] shrink-0 mt-0.5">tips_and_updates</span>
-                    <p className="text-xs text-indigo-950 leading-relaxed">
-                        <strong className="font-semibold">Tip:</strong> Your savings rate is higher than 88% of peers. You are on track for your yearly target.
-                    </p>
+
+                    {/*महिला */}
+                    <div className="flex flex-col bg-pink-50/50 rounded-2xl border border-pink-100 p-4">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-[20px]">woman</span>
+                            </div>
+                            <h3 className="text-slate-700 font-semibold text-sm">महिला</h3>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-pink-100">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Up to Last FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-slate-400">Current FY</span>
+                                <span className="text-sm font-bold text-slate-700">0</span>
+                            </div>
+                            <div className="flex flex-col pl-2">
+                                <span className="text-[9px] uppercase font-bold text-pink-600">Total</span>
+                                <span className="text-lg font-extrabold text-pink-700 leading-none mt-0.5">0</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
