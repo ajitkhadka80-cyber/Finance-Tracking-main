@@ -246,9 +246,9 @@ export default function Transactions() {
     });
 
     rawLines.sort((a, b) => {
-        if (a.type === 'Dr' && b.type === 'Cr') return -1;
-        if (a.type === 'Cr' && b.type === 'Dr') return 1;
-        return 0;
+      if (a.type === 'Dr' && b.type === 'Cr') return -1;
+      if (a.type === 'Cr' && b.type === 'Dr') return 1;
+      return 0;
     });
 
     const payload = {
@@ -539,7 +539,8 @@ export default function Transactions() {
             </button>
           </div>
         </form>
-      )}
-    </main>
+      )
+      }
+    </main >
   );
 }
