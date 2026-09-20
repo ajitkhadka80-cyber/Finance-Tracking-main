@@ -61,7 +61,7 @@ export default function BalanceSheet() {
                         }
                     } 
                     // Calculate Liabilities & Equity
-                    else if (c.includes('liability') || c.includes('capital') || c.includes('equity')) {
+                    else if (c.includes('liabilit') || c.includes('capital') || c.includes('equity')) {
                         const amount = item.credit - item.debit;
                         if (amount !== 0) {
                             liab.push({ ...item, amount });
@@ -99,9 +99,14 @@ export default function BalanceSheet() {
         if (!printData) return;
         
         const leftRows = [...liabilities];
-        leftRows.push({ code: '', description: 'Net Profit / (Loss) for the year', amount: netProfit });
+        if (netProfit >= 0) {
+            leftRows.push({ code: '', description: 'Net Profit for the year', amount: netProfit });
+        }
         
         const rightRows = [...assets];
+        if (netProfit < 0) {
+            rightRows.push({ code: '', description: 'Net Loss for the year', amount: Math.abs(netProfit) });
+        }
 
         const maxRows = Math.max(leftRows.length, rightRows.length);
         const dataToExport = [];
@@ -120,10 +125,10 @@ export default function BalanceSheet() {
         dataToExport.push({
             'Code (Liabilities)': '',
             'Capital and Liabilities': 'Total',
-            'Amount (Liabilities)': totalLiabilities + netProfit,
+            'Amount (Liabilities)': totalLiabilities + (netProfit >= 0 ? netProfit : 0),
             'Code (Assets)': '',
             'Assets': 'Total',
-            'Amount (Assets)': totalAssets
+            'Amount (Assets)': totalAssets + (netProfit < 0 ? Math.abs(netProfit) : 0)
         });
 
         const ws = XLSX.utils.json_to_sheet(dataToExport);
@@ -231,15 +236,17 @@ export default function BalanceSheet() {
                                     <div></div>
                                 </div>
                                 
-                                <div className="grid grid-cols-5 text-sm font-bold text-slate-900 border-t border-slate-300">
-                                    <div className="col-span-1 p-2 border-r border-slate-300"></div>
-                                    <div className="col-span-3 p-2 border-r border-slate-300">Net Profit / (Loss) for the year</div>
-                                    <div className="p-2 text-right font-mono">{formatMoney(netProfit)}</div>
-                                </div>
+                                {netProfit >= 0 && (
+                                    <div className="grid grid-cols-5 text-sm font-bold text-slate-900 border-t border-slate-300">
+                                        <div className="col-span-1 p-2 border-r border-slate-300"></div>
+                                        <div className="col-span-3 p-2 border-r border-slate-300">Net Profit for the year</div>
+                                        <div className="p-2 text-right font-mono">{formatMoney(netProfit)}</div>
+                                    </div>
+                                )}
                             </div>
                             <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50 mt-auto">
                                 <div className="col-span-4 p-2 text-right border-r border-slate-300">Total</div>
-                                <div className="p-2 text-right font-mono">{formatMoney(totalLiabilities + netProfit)}</div>
+                                <div className="p-2 text-right font-mono">{formatMoney(totalLiabilities + (netProfit >= 0 ? netProfit : 0))}</div>
                             </div>
                         </div>
 
@@ -265,10 +272,17 @@ export default function BalanceSheet() {
                                     <div className="col-span-3 border-r border-slate-300"></div>
                                     <div></div>
                                 </div>
+                                {netProfit < 0 && (
+                                    <div className="grid grid-cols-5 text-sm font-bold text-slate-900 border-t border-slate-300">
+                                        <div className="col-span-1 p-2 border-r border-slate-300"></div>
+                                        <div className="col-span-3 p-2 border-r border-slate-300">Net Loss for the year</div>
+                                        <div className="p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
+                                    </div>
+                                )}
                             </div>
                             <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50 mt-auto">
                                 <div className="col-span-4 p-2 text-right border-r border-slate-300">Total</div>
-                                <div className="p-2 text-right font-mono">{formatMoney(totalAssets)}</div>
+                                <div className="p-2 text-right font-mono">{formatMoney(totalAssets + (netProfit < 0 ? Math.abs(netProfit) : 0))}</div>
                             </div>
                         </div>
                     </div>

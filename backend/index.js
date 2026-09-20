@@ -484,7 +484,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
           } else {
             displayDr = Math.abs(priorYearsProfit); // Loss is a debit balance
           }
-          
+
           trialBalance.push({
             code: 'RE',
             description: 'Prior Years Profit / (Loss)',
@@ -506,6 +506,68 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
     });
   });
 });
+
+// === VALIDATION ===
+const validateBalances = (db, lines, excludeTxId = null) => {
+  return new Promise((resolve, reject) => {
+    const netChanges = {};
+    for (const line of lines) {
+      if (!netChanges[line.code_number]) netChanges[line.code_number] = 0;
+      if (line.type === 'Dr') netChanges[line.code_number] += Number(line.amount);
+      if (line.type === 'Cr') netChanges[line.code_number] -= Number(line.amount);
+    }
+
+    const codeNumbers = Object.keys(netChanges);
+    if (codeNumbers.length === 0) return resolve();
+
+    const placeholders = codeNumbers.map(() => '?').join(',');
+    let query = `
+      SELECT 
+        c.code_number, 
+        c.description,
+        c.classification,
+        COALESCE(SUM(CASE WHEN tl.type = 'Dr' THEN tl.amount ELSE 0 END), 0) as dr,
+        COALESCE(SUM(CASE WHEN tl.type = 'Cr' THEN tl.amount ELSE 0 END), 0) as cr
+      FROM codes c
+      LEFT JOIN transaction_lines tl ON c.code_number = tl.code_number
+    `;
+    const params = [];
+
+    if (excludeTxId) {
+      query += ` AND tl.transaction_id != ?`;
+      params.push(excludeTxId);
+    }
+
+    query += ` WHERE c.code_number IN (${placeholders}) GROUP BY c.code_number, c.description, c.classification`;
+    params.push(...codeNumbers);
+
+    db.all(query, params, (err, rows) => {
+      if (err) return reject(err);
+
+      for (const row of rows) {
+        const code = row.code_number;
+        const cls = row.classification.toLowerCase();
+        const currentDr = row.dr;
+        const currentCr = row.cr;
+
+        const netChange = netChanges[code];
+        const newDrCrBalance = (currentDr - currentCr) + netChange;
+
+        const isAssetOrExpense = cls.includes('asset') || cls.includes('expenditure') || cls.includes('expense');
+        const isLiabilityOrIncome = cls.includes('liabilit') || cls.includes('income') || cls.includes('equity') || cls.includes('capital');
+
+        if (isAssetOrExpense && newDrCrBalance < 0) {
+          return reject(new Error(`Transaction would result in a negative balance for Asset/Expense account: ${row.description} (${code}).`));
+        }
+
+        if (isLiabilityOrIncome && newDrCrBalance > 0) {
+          return reject(new Error(`Transaction would result in a positive balance for Liability/Income account: ${row.description} (${code}).`));
+        }
+      }
+      resolve();
+    });
+  });
+};
 
 // === TRANSACTIONS ===
 app.get('/api/transactions', authenticateToken, (req, res) => {
@@ -561,10 +623,16 @@ app.get('/api/ledger/:code', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/api/transactions', authenticateToken, (req, res) => {
+app.post('/api/transactions', authenticateToken, async (req, res) => {
   const { sn, date, final_description, lines } = req.body;
   if (!sn || !date || !lines || lines.length === 0) {
     return res.status(400).json({ error: 'Missing required fields or lines' });
+  }
+
+  try {
+    await validateBalances(db, lines);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 
   const txDateStr = date.split(' ')[0];
@@ -615,10 +683,17 @@ app.post('/api/transactions', authenticateToken, (req, res) => {
   });
 });
 
-app.post('/api/transactions/bulk', authenticateToken, (req, res) => {
+app.post('/api/transactions/bulk', authenticateToken, async (req, res) => {
   const { transactions } = req.body;
   if (!Array.isArray(transactions) || transactions.length === 0) {
     return res.status(400).json({ error: 'No transactions provided' });
+  }
+
+  const allLines = transactions.flatMap(t => t.lines);
+  try {
+    await validateBalances(db, allLines);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 
   db.get("SELECT start_date, end_date FROM fiscal_years WHERE is_current = 1", [], (err, activeFy) => {
@@ -718,11 +793,17 @@ app.get('/api/transactions/:id', authenticateToken, (req, res) => {
   });
 });
 
-app.put('/api/transactions/:id', authenticateToken, (req, res) => {
+app.put('/api/transactions/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const { sn, date, final_description, lines } = req.body;
   if (!sn || !date || !lines || lines.length === 0) {
     return res.status(400).json({ error: 'Missing required fields or lines' });
+  }
+
+  try {
+    await validateBalances(db, lines, id);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
   }
 
   const txDateStr = date.split(' ')[0];
@@ -804,9 +885,52 @@ app.delete('/api/transactions/:id', authenticateToken, requireAdmin, (req, res) 
   });
 });
 
-db.run("ALTER TABLE transactions ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP", (err) => {
-  if (!err) console.log("Added created_at to transactions table.");
+// === SCHEDULED WORK ===
+app.get('/api/schedule-work', authenticateToken, (req, res) => {
+  db.all("SELECT * FROM scheduled_work ORDER BY due_date ASC", [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
 });
+
+app.post('/api/schedule-work', authenticateToken, (req, res) => {
+  const { title, description, due_date } = req.body;
+  if (!title || !due_date) {
+    return res.status(400).json({ error: 'Title and due_date are required' });
+  }
+
+  db.run(`INSERT INTO scheduled_work (title, description, due_date, status) VALUES (?, ?, ?, ?)`,
+    [title, description || '', due_date, 'pending'],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ id: this.lastID, title, description, due_date, status: 'pending' });
+    }
+  );
+});
+
+app.put('/api/schedule-work/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { title, description, due_date, status } = req.body;
+
+  db.run(`UPDATE scheduled_work SET title = ?, description = ?, due_date = ?, status = ? WHERE id = ?`,
+    [title, description, due_date, status, id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Scheduled work not found' });
+      res.json({ id, title, description, due_date, status });
+    }
+  );
+});
+
+app.delete('/api/schedule-work/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  db.run(`DELETE FROM scheduled_work WHERE id = ?`, [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Scheduled work deleted successfully' });
+  });
+});
+
+
 
 // === BACKUP & RESTORE ===
 const multer = require('multer');
@@ -844,7 +968,7 @@ app.post('/api/restore', authenticateToken, requireAdmin, upload.single('dbfile'
   db.close((err) => {
     if (err) {
       console.error('Error closing DB for restore:', err);
-      fs.unlink(uploadedPath, () => {});
+      fs.unlink(uploadedPath, () => { });
       return res.status(500).json({ error: 'Failed to prepare database for restore' });
     }
 
@@ -854,8 +978,8 @@ app.post('/api/restore', authenticateToken, requireAdmin, upload.single('dbfile'
         console.error('Error replacing DB file:', copyErr);
         return res.status(500).json({ error: 'Failed to restore database file' });
       }
-      
-      fs.unlink(uploadedPath, () => {});
+
+      fs.unlink(uploadedPath, () => { });
 
       res.json({ success: true, message: 'Database restored successfully. Server is restarting.' });
 

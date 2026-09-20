@@ -1,14 +1,43 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
+import NepaliDate from 'nepali-date-converter';
 
 export default function Sidebar() {
-  const { user, logout, orgName, receiptLanguage } = useContext(AuthContext);
+  const { user, logout, orgName, receiptLanguage, token } = useContext(AuthContext);
   const location = useLocation();
   const [showReports, setShowReports] = useState(false);
   const [showTransactions, setShowTransactions] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [urgentCount, setUrgentCount] = useState(0);
+
   const isReportsActive = location.pathname.includes('/transactions/all') || location.pathname.includes('/reports/');
   const isTransactionsActive = location.pathname === '/transactions' || location.pathname.includes('/transactions/edit') || location.pathname.includes('/transactions/reverse');
+  const isScheduleActive = location.pathname.includes('/schedule-work');
+
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/schedule-work', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const today = new NepaliDate();
+        let count = 0;
+        data.forEach(task => {
+          if (task.status === 'completed') return;
+          try {
+            const due = new NepaliDate(task.due_date);
+            const diffTime = due.toJsDate().getTime() - today.toJsDate().getTime();
+            const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            if (daysRemaining <= 10) count++;
+          } catch(e) {}
+        });
+        setUrgentCount(count);
+      })
+      .catch(err => console.error('Error fetching tasks for sidebar:', err));
+  }, [token]);
 
   const navServices = [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
@@ -67,6 +96,39 @@ export default function Sidebar() {
           <h3 className="px-4 text-[11px] font-semibold text-blue-300 mb-2 uppercase tracking-wider">Navigation & Services</h3>
           <nav className="flex flex-col">
             {renderNavItems(navServices)}
+            
+            {/* Schedule Work Collapsible */}
+            <div>
+              <button
+                onClick={() => setShowSchedule(!showSchedule)}
+                className={`w-full flex items-center justify-between px-4 py-2 text-[13px] transition-colors border-l-4 ${showSchedule || isScheduleActive ? 'bg-[#18529d] text-white border-yellow-400 font-semibold' : 'text-slate-300 hover:bg-[#18529d] hover:text-white border-transparent'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-[18px]">schedule</span>
+                  <span>Schedule Work</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {urgentCount > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                      {urgentCount}
+                    </span>
+                  )}
+                  <span className="material-symbols-outlined text-[18px]">{showSchedule || isScheduleActive ? 'expand_less' : 'expand_more'}</span>
+                </div>
+              </button>
+              
+              {(showSchedule || isScheduleActive) && (
+                <div className="bg-[#0c2f5a] flex flex-col py-1">
+                  <Link
+                    to="/schedule-work/work-to-be-done"
+                    className={`flex items-center gap-3 px-11 py-2 text-[12px] transition-colors ${location.pathname === '/schedule-work/work-to-be-done' ? 'text-yellow-400 font-semibold' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">task</span>
+                    <span>Work to be Done</span>
+                  </Link>
+                </div>
+              )}
+            </div>
             
             {/* Transactions Collapsible */}
             <div>

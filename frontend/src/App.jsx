@@ -13,6 +13,7 @@ import TrialBalance from './pages/TrialBalance';
 import ProfitAndLoss from './pages/ProfitAndLoss';
 import BalanceSheet from './pages/BalanceSheet';
 import BackupRestore from './pages/BackupRestore';
+import ScheduleWork from './pages/ScheduleWork';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -140,6 +141,14 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <BackupRestore />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/schedule-work/work-to-be-done" 
+            element={
+              <ProtectedRoute>
+                <ScheduleWork />
               </ProtectedRoute>
             } 
           />
