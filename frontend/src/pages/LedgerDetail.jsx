@@ -181,30 +181,19 @@ export default function LedgerDetail() {
 
             <div className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-slate-200 overflow-x-auto print:p-0 print:border-none print:shadow-none print:overflow-visible">
 
-                {/* Print Header */}
-                <div className="hidden print:block text-center mb-6">
+                {/* Report Header */}
+                <div className="text-center mb-6">
                     <h2 className="text-xl font-bold uppercase tracking-wide text-slate-900">{orgName || 'Organization Name'}</h2>
                     {selectedFY && (
                         <p className="text-sm font-semibold text-slate-700 mt-1 uppercase">Fiscal Year: {selectedFY.name}</p>
                     )}
                     <h3 className="text-lg font-semibold text-slate-800 mt-2 underline">Ledger Report</h3>
+                    <p className="text-md font-bold text-brand-700 mt-1">{ledgerData.code.description} (Code: {ledgerData.code.code_number})</p>
                 </div>
 
                 <table className="w-full border-collapse border border-slate-800 text-[13px] md:text-sm font-sans" style={{ minWidth: '700px' }}>
                     <tbody>
-                        <tr>
-                            <td className="border border-slate-800 p-2 font-medium bg-slate-50 w-32 text-slate-700">Ledger name</td>
-                            <td className="border border-slate-800 p-2 text-slate-900 font-semibold" colSpan={5}>{ledgerData.code.description}</td>
-                        </tr>
-                        <tr>
-                            <td className="border border-slate-800 p-2 font-medium bg-slate-50 text-slate-700">Code</td>
-                            <td className="border border-slate-800 p-2 text-slate-900 font-semibold" colSpan={5}>{ledgerData.code.code_number}</td>
-                        </tr>
 
-                        {/* Spacer Row */}
-                        <tr>
-                            <td colSpan={6} className="h-6 border-l border-r border-slate-800 border-b border-slate-800"></td>
-                        </tr>
 
                         <tr className="bg-slate-50 font-bold text-slate-800">
                             <td className="border border-slate-800 p-2 w-32">मिति</td>

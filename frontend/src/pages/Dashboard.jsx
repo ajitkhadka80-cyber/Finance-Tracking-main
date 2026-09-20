@@ -86,9 +86,6 @@ export default function Dashboard() {
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{getGreeting()}, {user?.name?.split(' ')[0] || 'Alex'}</h1>
               <p className="text-sm sm:text-base text-slate-500 mt-1">Here is your financial summary for this month.</p>
             </div>
-            <div className="flex items-center justify-end">
-              <img src="/logo.jpg" alt="Logo" className="h-16 object-contain drop-shadow-sm" />
-            </div>
           </section>
 
           <DashboardMetricCards transactions={transactions} />

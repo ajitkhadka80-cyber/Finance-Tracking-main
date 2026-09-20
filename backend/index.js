@@ -609,7 +609,7 @@ app.get('/api/ledger/:code', authenticateToken, (req, res) => {
       FROM transaction_lines tl
       JOIN transactions t ON tl.transaction_id = t.id
       WHERE tl.code_number = ?
-      ORDER BY t.date ASC, t.id ASC
+      ORDER BY t.date ASC, CAST(t.sn AS INTEGER) ASC, t.id ASC
     `;
 
     db.all(query, [codeNumber], (err, lines) => {
