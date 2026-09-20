@@ -61,6 +61,39 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [token]);
 
+  useEffect(() => {
+    let idleTimer;
+
+    const resetIdleTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      if (token) {
+        idleTimer = setTimeout(() => {
+          logout();
+          import('sweetalert2').then(Swal => {
+            Swal.default.fire('Session Expired', 'You have been automatically logged out due to 5 minutes of inactivity.', 'info');
+          });
+        }, 5 * 60 * 1000); // 5 minutes
+      }
+    };
+
+    resetIdleTimer();
+
+    const events = ['mousemove', 'keydown', 'wheel', 'mousedown', 'touchstart', 'touchmove'];
+    
+    const handleEvent = () => resetIdleTimer();
+    
+    events.forEach(event => {
+      window.addEventListener(event, handleEvent, false);
+    });
+
+    return () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      events.forEach(event => {
+        window.removeEventListener(event, handleEvent, false);
+      });
+    };
+  }, [token]);
+
   const login = async (tokenData, userData) => {
     localStorage.setItem('token', tokenData);
     setToken(tokenData);

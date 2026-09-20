@@ -849,11 +849,13 @@ app.post('/api/restore', authenticateToken, requireAdmin, upload.single('dbfile'
     }
 
     // Overwrite finora.db
-    fs.rename(uploadedPath, dbPath, (renameErr) => {
-      if (renameErr) {
-        console.error('Error replacing DB file:', renameErr);
+    fs.copyFile(uploadedPath, dbPath, (copyErr) => {
+      if (copyErr) {
+        console.error('Error replacing DB file:', copyErr);
         return res.status(500).json({ error: 'Failed to restore database file' });
       }
+      
+      fs.unlink(uploadedPath, () => {});
 
       res.json({ success: true, message: 'Database restored successfully. Server is restarting.' });
 
