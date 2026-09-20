@@ -129,6 +129,20 @@ export default function Sidebar() {
                     <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
                     <span>Trial Balance</span>
                   </Link>
+                  <Link
+                    to="/reports/profit-and-loss"
+                    className={`flex items-center gap-3 px-11 py-2 text-[12px] transition-colors ${location.pathname === '/reports/profit-and-loss' ? 'text-yellow-400 font-semibold' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">analytics</span>
+                    <span>Profit & Loss</span>
+                  </Link>
+                  <Link
+                    to="/reports/balance-sheet"
+                    className={`flex items-center gap-3 px-11 py-2 text-[12px] transition-colors ${location.pathname === '/reports/balance-sheet' ? 'text-yellow-400 font-semibold' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">account_balance</span>
+                    <span>Balance Sheet</span>
+                  </Link>
                 </div>
               )}
             </div>
