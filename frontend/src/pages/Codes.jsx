@@ -26,6 +26,23 @@ export default function Codes() {
         XLSX.writeFile(wb, "Sample_Codes.xlsx");
     };
 
+    const handleDownloadExcel = () => {
+        if (codes.length === 0) {
+            Swal.fire('Info', 'No codes available to download', 'info');
+            return;
+        }
+
+        const dataToExport = codes.map(c => ({
+            'Code Number': c.code_number,
+            'Description': c.description,
+            'Classification': c.classification
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Codes");
+        XLSX.writeFile(wb, "Account_Codes.xlsx");
+    };
     const handleFileUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -324,6 +341,14 @@ export default function Codes() {
                                     <p className="text-sm text-slate-500">All registered ledger accounts.</p>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    <button 
+                                        onClick={handleDownloadExcel}
+                                        className="px-3 py-1.5 bg-brand-50 border border-brand-200 text-brand-700 rounded-lg text-sm font-medium hover:bg-brand-100 transition-colors flex items-center gap-1 shadow-sm"
+                                        title="Download Codes to Excel"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">file_download</span>
+                                        <span className="hidden sm:inline">Export Excel</span>
+                                    </button>
                                     <button 
                                         onClick={handleDownloadSample}
                                         className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm"

@@ -418,6 +418,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
         const trialBalance = [];
         let totalDr = 0;
         let totalCr = 0;
+        let priorYearsProfit = 0;
 
         for (const code of codes) {
           let dr = 0;
@@ -430,8 +431,11 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
 
           for (const line of codeLines) {
             if (isIncomeOrExpenditure) {
-              // Only consider lines within the selected fiscal year
-              if (line.date >= startDate && line.date <= cutoffDate) {
+              if (line.date < startDate) {
+                // Accumulate prior years' profit
+                if (line.type === 'Cr') priorYearsProfit += line.amount;
+                if (line.type === 'Dr') priorYearsProfit -= line.amount;
+              } else if (line.date >= startDate && line.date <= cutoffDate) {
                 if (line.type === 'Dr') dr += line.amount;
                 if (line.type === 'Cr') cr += line.amount;
               }
@@ -469,6 +473,27 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
             totalDr += displayDr;
             totalCr += displayCr;
           }
+        }
+
+        // Add Prior Years Profit / Retained Earnings if it exists
+        if (priorYearsProfit !== 0) {
+          let displayDr = 0;
+          let displayCr = 0;
+          if (priorYearsProfit > 0) {
+            displayCr = priorYearsProfit; // Profit is a credit balance
+          } else {
+            displayDr = Math.abs(priorYearsProfit); // Loss is a debit balance
+          }
+          
+          trialBalance.push({
+            code: 'RE',
+            description: 'Prior Years Profit / (Loss)',
+            classification: 'Equity',
+            debit: displayDr,
+            credit: displayCr
+          });
+          totalDr += displayDr;
+          totalCr += displayCr;
         }
 
         res.json({

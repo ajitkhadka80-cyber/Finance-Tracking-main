@@ -2,10 +2,13 @@ import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
+import NepaliDate from 'nepali-date-converter';
+import * as XLSX from 'xlsx';
 
 export default function ProfitAndLoss() {
     const { token, orgName, receiptLanguage } = useContext(AuthContext);
-    const [selectedDate, setSelectedDate] = useState('');
+    const todayNepali = new NepaliDate().format('YYYY-MM-DD');
+    const [selectedDate, setSelectedDate] = useState(todayNepali);
     const [printData, setPrintData] = useState(null);
     
     const [incomes, setIncomes] = useState([]);
@@ -78,20 +81,68 @@ export default function ProfitAndLoss() {
         return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
     };
 
+    const handleDownloadExcel = () => {
+        if (!printData) return;
+        
+        const leftRows = [...expenses];
+        if (netProfit > 0) leftRows.push({ code: '', description: 'Net Profit', amount: netProfit });
+        
+        const rightRows = [...incomes];
+        if (netProfit < 0) rightRows.push({ code: '', description: 'Net Loss', amount: Math.abs(netProfit) });
+
+        const maxRows = Math.max(leftRows.length, rightRows.length);
+        const dataToExport = [];
+        
+        for (let i = 0; i < maxRows; i++) {
+            dataToExport.push({
+                'Code (Dr)': leftRows[i]?.code || '',
+                'Expenditure': leftRows[i]?.description || '',
+                'Amount (Dr)': leftRows[i]?.amount || '',
+                'Code (Cr)': rightRows[i]?.code || '',
+                'Income': rightRows[i]?.description || '',
+                'Amount (Cr)': rightRows[i]?.amount || ''
+            });
+        }
+
+        dataToExport.push({
+            'Code (Dr)': '',
+            'Expenditure': 'Total',
+            'Amount (Dr)': totalExpense + (netProfit > 0 ? netProfit : 0),
+            'Code (Cr)': '',
+            'Income': 'Total',
+            'Amount (Cr)': totalIncome + (netProfit < 0 ? Math.abs(netProfit) : 0)
+        });
+
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Profit and Loss");
+        XLSX.writeFile(wb, `Profit_And_Loss_${selectedDate}.xlsx`);
+    };
+
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="w-full max-w-[1600px] px-4 md:px-6 lg:px-8 mx-auto space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Profit and Loss Account</h1>
                     <p className="text-sm text-slate-500 mt-1">View income and expenditures up to a specific date.</p>
                 </div>
-                <button
-                    onClick={() => window.print()}
-                    className="h-10 px-4 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
-                >
-                    <span className="material-symbols-outlined text-[18px]">print</span>
-                    Print
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleDownloadExcel}
+                        disabled={!printData}
+                        className="h-10 px-4 bg-brand-50 border border-brand-200 text-brand-700 text-sm font-semibold rounded-xl hover:bg-brand-100 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">file_download</span>
+                        Export
+                    </button>
+                    <button
+                        onClick={() => window.print()}
+                        className="h-10 px-4 bg-white border border-slate-200 text-slate-700 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">print</span>
+                        Print
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200/60 space-y-4 print:hidden">
@@ -158,15 +209,23 @@ export default function ProfitAndLoss() {
                                         <div className="p-2 text-right font-mono">{formatMoney(e.amount)}</div>
                                     </div>
                                 ))}
+                                
+                                {/* Filler to extend vertical borders */}
+                                <div className="grid grid-cols-5 flex-1">
+                                    <div className="col-span-1 border-r border-slate-300"></div>
+                                    <div className="col-span-3 border-r border-slate-300"></div>
+                                    <div></div>
+                                </div>
+
                                 {netProfit > 0 && (
-                                    <div className="grid grid-cols-5 text-sm font-bold text-emerald-700 border-t border-slate-300 mt-auto">
+                                    <div className="grid grid-cols-5 text-sm font-bold text-emerald-700 border-t border-slate-300">
                                         <div className="col-span-1 p-2 border-r border-slate-300"></div>
                                         <div className="col-span-3 p-2 border-r border-slate-300">Net Profit</div>
                                         <div className="p-2 text-right font-mono">{formatMoney(netProfit)}</div>
                                     </div>
                                 )}
                             </div>
-                            <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50">
+                            <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50 mt-auto">
                                 <div className="col-span-4 p-2 text-right border-r border-slate-300">Total</div>
                                 <div className="p-2 text-right font-mono">{formatMoney(totalExpense + (netProfit > 0 ? netProfit : 0))}</div>
                             </div>
@@ -187,8 +246,16 @@ export default function ProfitAndLoss() {
                                         <div className="p-2 text-right font-mono">{formatMoney(i.amount)}</div>
                                     </div>
                                 ))}
+
+                                {/* Filler to extend vertical borders */}
+                                <div className="grid grid-cols-5 flex-1">
+                                    <div className="col-span-1 border-r border-slate-300"></div>
+                                    <div className="col-span-3 border-r border-slate-300"></div>
+                                    <div></div>
+                                </div>
+
                                 {netProfit < 0 && (
-                                    <div className="grid grid-cols-5 text-sm font-bold text-red-700 border-t border-slate-300 mt-auto">
+                                    <div className="grid grid-cols-5 text-sm font-bold text-red-700 border-t border-slate-300">
                                         <div className="col-span-1 p-2 border-r border-slate-300"></div>
                                         <div className="col-span-3 p-2 border-r border-slate-300">Net Loss</div>
                                         <div className="p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
