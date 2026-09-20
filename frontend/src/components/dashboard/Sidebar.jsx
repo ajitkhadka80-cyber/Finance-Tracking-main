@@ -15,12 +15,13 @@ export default function Sidebar() {
     { name: 'Member Info', path: '/members', icon: 'group' },
   ];
 
-  const adminSettings = [
-    { name: 'Account Codes', path: '/codes', icon: 'account_tree' },
-    { name: 'Users', path: '/users', icon: 'manage_accounts' },
-    { name: 'Settings', path: '/settings', icon: 'settings' },
-    { name: 'Change Password', path: '/change-password', icon: 'password' },
-  ];
+    const adminSettings = [
+        { name: 'Account Codes', path: '/codes', icon: 'account_tree' },
+        { name: 'Users', path: '/users', icon: 'manage_accounts' },
+        { name: 'Backup & Restore', path: '/backup-restore', icon: 'settings_backup_restore' },
+        { name: 'Settings', path: '/settings', icon: 'settings' },
+        { name: 'Change Password', path: '/change-password', icon: 'password' },
+    ];
 
   const renderNavItems = (items) => {
     return items.map((item, index) => {

@@ -808,6 +808,62 @@ db.run("ALTER TABLE transactions ADD COLUMN created_at DATETIME DEFAULT CURRENT_
   if (!err) console.log("Added created_at to transactions table.");
 });
 
+// === BACKUP & RESTORE ===
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, __dirname);
+  },
+  filename: function (req, file, cb) {
+    cb(null, 'uploaded_finora.db');
+  }
+});
+const upload = multer({ storage: storage });
+
+app.get('/api/backup', authenticateToken, requireAdmin, (req, res) => {
+  const dbPath = path.resolve(__dirname, 'finora.db');
+  res.download(dbPath, `DiyoPortal_backup_${new Date().toISOString().split('T')[0]}.db`, (err) => {
+    if (err) {
+      console.error('Error downloading backup:', err);
+    }
+  });
+});
+
+app.post('/api/restore', authenticateToken, requireAdmin, upload.single('dbfile'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const dbPath = path.resolve(__dirname, 'finora.db');
+  const uploadedPath = req.file.path;
+
+  // We must close the DB connection before replacing the file
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing DB for restore:', err);
+      fs.unlink(uploadedPath, () => {});
+      return res.status(500).json({ error: 'Failed to prepare database for restore' });
+    }
+
+    // Overwrite finora.db
+    fs.rename(uploadedPath, dbPath, (renameErr) => {
+      if (renameErr) {
+        console.error('Error replacing DB file:', renameErr);
+        return res.status(500).json({ error: 'Failed to restore database file' });
+      }
+
+      res.json({ success: true, message: 'Database restored successfully. Server is restarting.' });
+
+      setTimeout(() => {
+        process.exit(0);
+      }, 1000);
+    });
+  });
+});
+
 app.listen(PORT, () => {
   console.log(`Backend server running on http://localhost:${PORT}`);
 });

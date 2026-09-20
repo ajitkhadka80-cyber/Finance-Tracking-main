@@ -12,6 +12,7 @@ import LedgerDetail from './pages/LedgerDetail';
 import TrialBalance from './pages/TrialBalance';
 import ProfitAndLoss from './pages/ProfitAndLoss';
 import BalanceSheet from './pages/BalanceSheet';
+import BackupRestore from './pages/BackupRestore';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
@@ -131,6 +132,14 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin={true}>
                 <Settings />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/backup-restore" 
+            element={
+              <ProtectedRoute requireAdmin={true}>
+                <BackupRestore />
               </ProtectedRoute>
             } 
           />
