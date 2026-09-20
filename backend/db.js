@@ -44,6 +44,16 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Scheduled Work Table
+  db.run(`CREATE TABLE IF NOT EXISTS scheduled_work (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    due_date TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Create Transactions Header Table
   db.run(`CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
