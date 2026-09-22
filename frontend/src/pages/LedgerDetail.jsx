@@ -189,7 +189,7 @@ export default function LedgerDetail() {
                         <p className="text-sm font-semibold text-slate-700 mt-1 uppercase">Fiscal Year: {selectedFY.name}</p>
                     )}
                     <h3 className="text-lg font-semibold text-slate-800 mt-2 underline">Ledger Report</h3>
-                    <p className="text-md font-bold text-brand-700 mt-1">{ledgerData.code.description} (Code: {ledgerData.code.code_number})</p>
+                    <p className="text-md font-bold text-brand-700 mt-1">{ledgerData.code.description} (Code: {dNum(ledgerData.code.code_number)})</p>
                 </div>
 
                 <table className="w-full border-collapse border border-slate-800 text-[13px] md:text-sm font-sans" style={{ minWidth: '700px' }}>
@@ -219,12 +219,12 @@ export default function LedgerDetail() {
 
                         {currentTransactions.map((tx, idx) => (
                             <tr key={idx} className="hover:bg-slate-50/30">
-                                <td className="border border-slate-800 p-2 text-slate-700 whitespace-nowrap">{tx.date ? tx.date.split('T')[0].split(' ')[0] : ''}</td>
+                                <td className="border border-slate-800 p-2 text-slate-700 whitespace-nowrap">{dNum(tx.date ? tx.date.split('T')[0].split(' ')[0] : '')}</td>
                                 <td className="border border-slate-800 p-2 text-slate-800">{tx.final_description}</td>
-                                <td className="border border-slate-800 p-2 text-center text-slate-700">{tx.sn}</td>
-                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-700">{tx.type === 'Dr' ? tx.amount.toFixed(2) : ''}</td>
-                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-700">{tx.type === 'Cr' ? tx.amount.toFixed(2) : ''}</td>
-                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-900 font-medium">{tx.balanceVal.toFixed(2)} {tx.balanceType}</td>
+                                <td className="border border-slate-800 p-2 text-center text-slate-700">{dNum(tx.sn)}</td>
+                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-700">{tx.type === 'Dr' ? dNum(tx.amount.toFixed(2)) : ''}</td>
+                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-700">{tx.type === 'Cr' ? dNum(tx.amount.toFixed(2)) : ''}</td>
+                                <td className="border border-slate-800 p-2 text-right font-mono text-slate-900 font-medium">{dNum(tx.balanceVal.toFixed(2))} {tx.balanceType}</td>
                             </tr>
                         ))}
 
@@ -238,9 +238,9 @@ export default function LedgerDetail() {
                             <td className="border border-slate-800 p-2"></td>
                             <td className="border border-slate-800 p-2">Total (Period)</td>
                             <td className="border border-slate-800 p-2"></td>
-                            <td className="border border-slate-800 p-2 text-right font-mono">{periodDr > 0 ? periodDr.toFixed(2) : '0'}</td>
-                            <td className="border border-slate-800 p-2 text-right font-mono">{periodCr > 0 ? periodCr.toFixed(2) : '0'}</td>
-                            <td className="border border-slate-800 p-2 text-right font-mono text-brand-700">{finalBalanceVal.toFixed(2)} {finalBalanceType}</td>
+                            <td className="border border-slate-800 p-2 text-right font-mono">{periodDr > 0 ? dNum(periodDr.toFixed(2)) : dNum('0')}</td>
+                            <td className="border border-slate-800 p-2 text-right font-mono">{periodCr > 0 ? dNum(periodCr.toFixed(2)) : dNum('0')}</td>
+                            <td className="border border-slate-800 p-2 text-right font-mono text-brand-700">{dNum(finalBalanceVal.toFixed(2))} {finalBalanceType}</td>
                         </tr>
                     </tbody>
                 </table>

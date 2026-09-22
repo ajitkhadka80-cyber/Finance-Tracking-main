@@ -5,10 +5,13 @@ import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 import NepaliDate from 'nepali-date-converter';
 import * as XLSX from 'xlsx';
+import { toNepaliDigits } from 'nepali-number-words';
 
 export default function TrialBalance() {
     const { token, orgName, receiptLanguage } = useContext(AuthContext);
     const navigate = useNavigate();
+    const isEng = receiptLanguage === 'english';
+    const dNum = (num) => isEng ? num : toNepaliDigits(num);
     
     const todayNepali = new NepaliDate().format('YYYY-MM-DD');
     const [selectedDate, setSelectedDate] = useState(todayNepali);
@@ -51,7 +54,8 @@ export default function TrialBalance() {
 
     const formatMoney = (amount) => {
         if (amount === 0 || !amount) return '';
-        return new Intl.NumberFormat('en-NP', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(amount);
+        const formatted = new Intl.NumberFormat('en-NP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        return dNum(formatted);
     };
 
     const handleDownloadExcel = () => {
@@ -146,7 +150,7 @@ export default function TrialBalance() {
                         </h2>
                         <h3 className="text-lg font-semibold text-slate-700 mt-1">Trial Balance</h3>
                         <p className="text-sm text-slate-500 mt-2">
-                            As of <span className="font-semibold text-slate-700">{printData.date}</span>
+                            As of <span className="font-semibold text-slate-700">{dNum(printData.date)}</span>
                         </p>
                         <p className="text-xs text-slate-400">Fiscal Year: {printData.fiscalYear.name}</p>
                     </div>
@@ -175,8 +179,10 @@ export default function TrialBalance() {
                                         onDoubleClick={() => navigate(`/reports/ledger/${row.code}`, { state: { fyId: printData?.fiscalYear?.id } })}
                                         title="Double click to view ledger"
                                     >
-                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{row.code}</div>
-                                        <div className="col-span-4 p-2 border-r border-slate-300">{row.description}</div>
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{dNum(row.code)}</div>
+                                        <div className="col-span-4 p-2 border-r border-slate-300">
+                                            {row.code === 'RE' ? (isEng ? row.description : 'विगत वर्षको संचितनाफा/नोक्सान') : row.description}
+                                        </div>
                                         <div className="col-span-3 p-2 text-right font-mono border-r border-slate-300">{formatMoney(row.debit)}</div>
                                         <div className="col-span-3 p-2 text-right font-mono">{formatMoney(row.credit)}</div>
                                     </div>

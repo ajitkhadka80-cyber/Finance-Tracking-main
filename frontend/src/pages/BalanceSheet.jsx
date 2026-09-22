@@ -4,19 +4,23 @@ import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 import NepaliDate from 'nepali-date-converter';
 import * as XLSX from 'xlsx';
+import { toNepaliDigits } from 'nepali-number-words';
 
 export default function BalanceSheet() {
     const { token, orgName, receiptLanguage } = useContext(AuthContext);
     const todayNepali = new NepaliDate().format('YYYY-MM-DD');
     const [selectedDate, setSelectedDate] = useState(todayNepali);
-    const [printData, setPrintData] = useState(null);
     
+    const isEng = receiptLanguage === 'english';
+    const dNum = (num) => isEng ? num : toNepaliDigits(num);
+    const [printData, setPrintData] = useState(null);
+
     const [assets, setAssets] = useState([]);
     const [liabilities, setLiabilities] = useState([]);
     const [totalAssets, setTotalAssets] = useState(0);
     const [totalLiabilities, setTotalLiabilities] = useState(0);
     const [netProfit, setNetProfit] = useState(0);
-    
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -25,7 +29,7 @@ export default function BalanceSheet() {
             setError("Please select a date.");
             return;
         }
-        
+
         setError(null);
         setLoading(true);
         try {
@@ -35,23 +39,23 @@ export default function BalanceSheet() {
             const result = await res.json();
             if (res.ok) {
                 const data = result.data || [];
-                
+
                 const ast = [];
                 const liab = [];
                 let tAst = 0;
                 let tLiab = 0;
                 let tInc = 0;
                 let tExp = 0;
-                
+
                 data.forEach(item => {
                     const c = item.classification.toLowerCase();
-                    
+
                     // Calculate Net Profit
                     if (c.includes('income')) {
                         tInc += (item.credit - item.debit);
                     } else if (c.includes('expenditure') || c.includes('expense')) {
                         tExp += (item.debit - item.credit);
-                    } 
+                    }
                     // Calculate Assets
                     else if (c.includes('asset')) {
                         const amount = item.debit - item.credit;
@@ -59,7 +63,7 @@ export default function BalanceSheet() {
                             ast.push({ ...item, amount });
                             tAst += amount;
                         }
-                    } 
+                    }
                     // Calculate Liabilities & Equity
                     else if (c.includes('liabilit') || c.includes('capital') || c.includes('equity')) {
                         const amount = item.credit - item.debit;
@@ -69,7 +73,7 @@ export default function BalanceSheet() {
                         }
                     }
                 });
-                
+
                 const calculatedNetProfit = tInc - tExp;
 
                 setAssets(ast);
@@ -77,7 +81,7 @@ export default function BalanceSheet() {
                 setTotalAssets(tAst);
                 setTotalLiabilities(tLiab);
                 setNetProfit(calculatedNetProfit);
-                
+
                 setPrintData({ fiscalYear: result.fiscalYear, date: selectedDate });
             } else {
                 setError(result.error || "Failed to fetch report data");
@@ -91,18 +95,19 @@ export default function BalanceSheet() {
     };
 
     const formatMoney = (amount) => {
-        if (amount === 0 || !amount) return '0.00';
-        return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        if (amount === 0 || !amount) return dNum('0.00');
+        const formatted = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        return dNum(formatted);
     };
 
     const handleDownloadExcel = () => {
         if (!printData) return;
-        
+
         const leftRows = [...liabilities];
         if (netProfit >= 0) {
             leftRows.push({ code: '', description: 'Net Profit for the year', amount: netProfit });
         }
-        
+
         const rightRows = [...assets];
         if (netProfit < 0) {
             rightRows.push({ code: '', description: 'Net Loss for the year', amount: Math.abs(netProfit) });
@@ -110,7 +115,7 @@ export default function BalanceSheet() {
 
         const maxRows = Math.max(leftRows.length, rightRows.length);
         const dataToExport = [];
-        
+
         for (let i = 0; i < maxRows; i++) {
             dataToExport.push({
                 'Code (Liabilities)': leftRows[i]?.code || '',
@@ -167,7 +172,7 @@ export default function BalanceSheet() {
                 <div className="flex flex-col sm:flex-row items-end gap-4">
                     <div className="w-full sm:w-1/3">
                         <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Date (Up to)</label>
-                        <NepaliDatePicker 
+                        <NepaliDatePicker
                             inputClassName="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
                             value={selectedDate}
                             onChange={(value) => setSelectedDate(value)}
@@ -175,7 +180,7 @@ export default function BalanceSheet() {
                         />
                     </div>
                     <div className="w-full sm:w-1/3">
-                        <button 
+                        <button
                             onClick={fetchReport}
                             disabled={loading || !selectedDate}
                             className="w-full h-11 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-brand-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
@@ -206,13 +211,13 @@ export default function BalanceSheet() {
                         </h2>
                         <h3 className="text-lg font-semibold text-slate-700 mt-1">Balance Sheet</h3>
                         <p className="text-sm text-slate-500 mt-2">
-                            As of <span className="font-semibold text-slate-700">{printData.date}</span>
+                            As of <span className="font-semibold text-slate-700">{dNum(printData.date)}</span>
                         </p>
                         <p className="text-xs text-slate-400">Fiscal Year: {printData.fiscalYear.name}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border border-slate-900">
-                        
+
                         {/* Capital and Liabilities Side */}
                         <div className="border-b md:border-b-0 md:border-r border-slate-900 flex flex-col">
                             <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-12 text-sm">
@@ -223,23 +228,23 @@ export default function BalanceSheet() {
                             <div className="flex-1 flex flex-col">
                                 {liabilities.map(l => (
                                     <div key={l.code} className="grid grid-cols-12 text-sm text-slate-700">
-                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{l.code}</div>
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 text-slate-500 flex items-center">{dNum(l.code)}</div>
                                         <div className="col-span-6 p-2 border-r border-slate-300">{l.description}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(l.amount)}</div>
                                     </div>
                                 ))}
-                                
+
                                 {/* Filler to extend vertical borders */}
                                 <div className="grid grid-cols-12 flex-1">
                                     <div className="col-span-2 border-r border-slate-300"></div>
                                     <div className="col-span-6 border-r border-slate-300"></div>
                                     <div className="col-span-4"></div>
                                 </div>
-                                
+
                                 {netProfit >= 0 && (
                                     <div className="grid grid-cols-12 text-sm font-bold text-slate-900 border-t border-slate-300">
                                         <div className="col-span-2 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Profit for the year</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{isEng ? 'Net Profit for the year' : 'यस वर्षको खुद नाफा'}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(netProfit)}</div>
                                     </div>
                                 )}
@@ -260,7 +265,7 @@ export default function BalanceSheet() {
                             <div className="flex-1 flex flex-col">
                                 {assets.map(a => (
                                     <div key={a.code} className="grid grid-cols-12 text-sm text-slate-700">
-                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{a.code}</div>
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{dNum(a.code)}</div>
                                         <div className="col-span-6 p-2 border-r border-slate-300">{a.description}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(a.amount)}</div>
                                     </div>
@@ -275,7 +280,7 @@ export default function BalanceSheet() {
                                 {netProfit < 0 && (
                                     <div className="grid grid-cols-12 text-sm font-bold text-slate-900 border-t border-slate-300">
                                         <div className="col-span-2 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Loss for the year</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{isEng ? 'Net Loss for the year' : 'यस वर्षको खुद नोक्सान'}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
                                     </div>
                                 )}
@@ -288,8 +293,9 @@ export default function BalanceSheet() {
                     </div>
                 </div>
             )}
-            
-            <style dangerouslySetInnerHTML={{__html: `
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @media print {
                     @page { size: portrait; margin: 15mm; }
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }

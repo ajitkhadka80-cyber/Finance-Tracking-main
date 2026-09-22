@@ -4,19 +4,23 @@ import { NepaliDatePicker } from "nepali-datepicker-reactjs";
 import "nepali-datepicker-reactjs/dist/index.css";
 import NepaliDate from 'nepali-date-converter';
 import * as XLSX from 'xlsx';
+import { toNepaliDigits } from 'nepali-number-words';
 
 export default function ProfitAndLoss() {
     const { token, orgName, receiptLanguage } = useContext(AuthContext);
     const todayNepali = new NepaliDate().format('YYYY-MM-DD');
     const [selectedDate, setSelectedDate] = useState(todayNepali);
-    const [printData, setPrintData] = useState(null);
     
+    const isEng = receiptLanguage === 'english';
+    const dNum = (num) => isEng ? num : toNepaliDigits(num);
+    const [printData, setPrintData] = useState(null);
+
     const [incomes, setIncomes] = useState([]);
     const [expenses, setExpenses] = useState([]);
     const [totalIncome, setTotalIncome] = useState(0);
     const [totalExpense, setTotalExpense] = useState(0);
     const [netProfit, setNetProfit] = useState(0);
-    
+
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -25,7 +29,7 @@ export default function ProfitAndLoss() {
             setError("Please select a date.");
             return;
         }
-        
+
         setError(null);
         setLoading(true);
         try {
@@ -35,12 +39,12 @@ export default function ProfitAndLoss() {
             const result = await res.json();
             if (res.ok) {
                 const data = result.data || [];
-                
+
                 const inc = [];
                 const exp = [];
                 let tInc = 0;
                 let tExp = 0;
-                
+
                 data.forEach(item => {
                     const c = item.classification.toLowerCase();
                     if (c.includes('income')) {
@@ -57,13 +61,13 @@ export default function ProfitAndLoss() {
                         }
                     }
                 });
-                
+
                 setIncomes(inc);
                 setExpenses(exp);
                 setTotalIncome(tInc);
                 setTotalExpense(tExp);
                 setNetProfit(tInc - tExp);
-                
+
                 setPrintData({ fiscalYear: result.fiscalYear, date: selectedDate });
             } else {
                 setError(result.error || "Failed to fetch report data");
@@ -77,22 +81,23 @@ export default function ProfitAndLoss() {
     };
 
     const formatMoney = (amount) => {
-        if (amount === 0 || !amount) return '0.00';
-        return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        if (amount === 0 || !amount) return dNum('0.00');
+        const formatted = new Intl.NumberFormat('en-NP', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+        return dNum(formatted);
     };
 
     const handleDownloadExcel = () => {
         if (!printData) return;
-        
+
         const leftRows = [...expenses];
         if (netProfit > 0) leftRows.push({ code: '', description: 'Net Profit', amount: netProfit });
-        
+
         const rightRows = [...incomes];
         if (netProfit < 0) rightRows.push({ code: '', description: 'Net Loss', amount: Math.abs(netProfit) });
 
         const maxRows = Math.max(leftRows.length, rightRows.length);
         const dataToExport = [];
-        
+
         for (let i = 0; i < maxRows; i++) {
             dataToExport.push({
                 'Code (Dr)': leftRows[i]?.code || '',
@@ -149,7 +154,7 @@ export default function ProfitAndLoss() {
                 <div className="flex flex-col sm:flex-row items-end gap-4">
                     <div className="w-full sm:w-1/3">
                         <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Date (Up to)</label>
-                        <NepaliDatePicker 
+                        <NepaliDatePicker
                             inputClassName="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
                             value={selectedDate}
                             onChange={(value) => setSelectedDate(value)}
@@ -157,7 +162,7 @@ export default function ProfitAndLoss() {
                         />
                     </div>
                     <div className="w-full sm:w-1/3">
-                        <button 
+                        <button
                             onClick={fetchReport}
                             disabled={loading || !selectedDate}
                             className="w-full h-11 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-sm shadow-brand-600/20 active:scale-[0.98] flex items-center justify-center gap-2"
@@ -188,7 +193,7 @@ export default function ProfitAndLoss() {
                         </h2>
                         <h3 className="text-lg font-semibold text-slate-700 mt-1">Profit and Loss Account</h3>
                         <p className="text-sm text-slate-500 mt-2">
-                            For the period up to <span className="font-semibold text-slate-700">{printData.date}</span>
+                            As of <span className="font-semibold text-slate-700">{dNum(printData.date)}</span>
                         </p>
                         <p className="text-xs text-slate-400">Fiscal Year: {printData.fiscalYear.name}</p>
                     </div>
@@ -204,12 +209,12 @@ export default function ProfitAndLoss() {
                             <div className="flex-1 flex flex-col">
                                 {expenses.map(e => (
                                     <div key={e.code} className="grid grid-cols-12 text-sm text-slate-700">
-                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{e.code}</div>
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{dNum(e.code)}</div>
                                         <div className="col-span-6 p-2 border-r border-slate-300">{e.description}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(e.amount)}</div>
                                     </div>
                                 ))}
-                                
+
                                 {/* Filler to extend vertical borders */}
                                 <div className="grid grid-cols-12 flex-1">
                                     <div className="col-span-2 border-r border-slate-300"></div>
@@ -220,7 +225,7 @@ export default function ProfitAndLoss() {
                                 {netProfit > 0 && (
                                     <div className="grid grid-cols-12 text-sm font-bold text-emerald-700 border-t border-slate-300">
                                         <div className="col-span-2 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Profit</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{isEng ? 'Net Profit' : 'खुद नाफा'}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(netProfit)}</div>
                                     </div>
                                 )}
@@ -241,7 +246,7 @@ export default function ProfitAndLoss() {
                             <div className="flex-1 flex flex-col">
                                 {incomes.map(i => (
                                     <div key={i.code} className="grid grid-cols-12 text-sm text-slate-700">
-                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{i.code}</div>
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{dNum(i.code)}</div>
                                         <div className="col-span-6 p-2 border-r border-slate-300">{i.description}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(i.amount)}</div>
                                     </div>
@@ -257,7 +262,7 @@ export default function ProfitAndLoss() {
                                 {netProfit < 0 && (
                                     <div className="grid grid-cols-12 text-sm font-bold text-red-700 border-t border-slate-300">
                                         <div className="col-span-2 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Loss</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{isEng ? 'Net Loss' : 'खुद नोक्सान'}</div>
                                         <div className="col-span-4 p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
                                     </div>
                                 )}
@@ -270,8 +275,9 @@ export default function ProfitAndLoss() {
                     </div>
                 </div>
             )}
-            
-            <style dangerouslySetInnerHTML={{__html: `
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 @media print {
                     @page { size: portrait; margin: 15mm; }
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white !important; }

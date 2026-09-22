@@ -259,7 +259,7 @@ export default function Transactions() {
     };
 
     try {
-      const url = isEdit ? `/ api / transactions / ${id}` : '/api/transactions';
+      const url = isEdit ? `/api/transactions/${id}` : '/api/transactions';
       const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
