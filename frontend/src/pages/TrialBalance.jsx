@@ -155,9 +155,9 @@ export default function TrialBalance() {
                         <div className="flex flex-col">
                             <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-12 text-sm">
                                 <div className="col-span-2 p-2 border-r border-slate-300">Code</div>
-                                <div className="col-span-6 p-2 border-r border-slate-300">Description</div>
-                                <div className="col-span-2 p-2 text-right border-r border-slate-300">Debit</div>
-                                <div className="col-span-2 p-2 text-right">Credit</div>
+                                <div className="col-span-4 p-2 border-r border-slate-300">Description</div>
+                                <div className="col-span-3 p-2 text-right border-r border-slate-300">Debit</div>
+                                <div className="col-span-3 p-2 text-right">Credit</div>
                             </div>
                             <div className="flex-1 flex flex-col">
                                 {trialBalanceData.slice().sort((a, b) => {
@@ -176,16 +176,16 @@ export default function TrialBalance() {
                                         title="Double click to view ledger"
                                     >
                                         <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{row.code}</div>
-                                        <div className="col-span-6 p-2 border-r border-slate-300">{row.description}</div>
-                                        <div className="col-span-2 p-2 text-right font-mono border-r border-slate-300">{formatMoney(row.debit)}</div>
-                                        <div className="col-span-2 p-2 text-right font-mono">{formatMoney(row.credit)}</div>
+                                        <div className="col-span-4 p-2 border-r border-slate-300">{row.description}</div>
+                                        <div className="col-span-3 p-2 text-right font-mono border-r border-slate-300">{formatMoney(row.debit)}</div>
+                                        <div className="col-span-3 p-2 text-right font-mono">{formatMoney(row.credit)}</div>
                                     </div>
                                 ))}
                             </div>
                             <div className="font-bold border-t border-slate-900 grid grid-cols-12 text-sm bg-slate-50">
-                                <div className="col-span-8 p-2 text-right border-r border-slate-300 uppercase tracking-wider text-slate-900">Total</div>
-                                <div className="col-span-2 p-2 text-right font-mono text-brand-600 border-r border-slate-300">{formatMoney(totals.debit)}</div>
-                                <div className="col-span-2 p-2 text-right font-mono text-brand-600">{formatMoney(totals.credit)}</div>
+                                <div className="col-span-6 p-2 text-right border-r border-slate-300 uppercase tracking-wider text-slate-900">Total</div>
+                                <div className="col-span-3 p-2 text-right font-mono text-brand-600 border-r border-slate-300">{formatMoney(totals.debit)}</div>
+                                <div className="col-span-3 p-2 text-right font-mono text-brand-600">{formatMoney(totals.credit)}</div>
                             </div>
                         </div>
                     </div>

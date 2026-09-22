@@ -215,74 +215,74 @@ export default function BalanceSheet() {
                         
                         {/* Capital and Liabilities Side */}
                         <div className="border-b md:border-b-0 md:border-r border-slate-900 flex flex-col">
-                            <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-5 text-sm">
-                                <div className="col-span-1 p-2 border-r border-slate-300">Code</div>
-                                <div className="col-span-3 p-2 border-r border-slate-300">Capital and Liabilities</div>
-                                <div className="p-2 text-right">Amount</div>
+                            <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-12 text-sm">
+                                <div className="col-span-2 p-2 border-r border-slate-300">Code</div>
+                                <div className="col-span-6 p-2 border-r border-slate-300">Capital and Liabilities</div>
+                                <div className="col-span-4 p-2 text-right">Amount</div>
                             </div>
                             <div className="flex-1 flex flex-col">
                                 {liabilities.map(l => (
-                                    <div key={l.code} className="grid grid-cols-5 text-sm text-slate-700">
-                                        <div className="col-span-1 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{l.code}</div>
-                                        <div className="col-span-3 p-2 border-r border-slate-300">{l.description}</div>
-                                        <div className="p-2 text-right font-mono">{formatMoney(l.amount)}</div>
+                                    <div key={l.code} className="grid grid-cols-12 text-sm text-slate-700">
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{l.code}</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{l.description}</div>
+                                        <div className="col-span-4 p-2 text-right font-mono">{formatMoney(l.amount)}</div>
                                     </div>
                                 ))}
                                 
                                 {/* Filler to extend vertical borders */}
-                                <div className="grid grid-cols-5 flex-1">
-                                    <div className="col-span-1 border-r border-slate-300"></div>
-                                    <div className="col-span-3 border-r border-slate-300"></div>
-                                    <div></div>
+                                <div className="grid grid-cols-12 flex-1">
+                                    <div className="col-span-2 border-r border-slate-300"></div>
+                                    <div className="col-span-6 border-r border-slate-300"></div>
+                                    <div className="col-span-4"></div>
                                 </div>
                                 
                                 {netProfit >= 0 && (
-                                    <div className="grid grid-cols-5 text-sm font-bold text-slate-900 border-t border-slate-300">
-                                        <div className="col-span-1 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-3 p-2 border-r border-slate-300">Net Profit for the year</div>
-                                        <div className="p-2 text-right font-mono">{formatMoney(netProfit)}</div>
+                                    <div className="grid grid-cols-12 text-sm font-bold text-slate-900 border-t border-slate-300">
+                                        <div className="col-span-2 p-2 border-r border-slate-300"></div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Profit for the year</div>
+                                        <div className="col-span-4 p-2 text-right font-mono">{formatMoney(netProfit)}</div>
                                     </div>
                                 )}
                             </div>
-                            <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50 mt-auto">
-                                <div className="col-span-4 p-2 text-right border-r border-slate-300">Total</div>
-                                <div className="p-2 text-right font-mono">{formatMoney(totalLiabilities + (netProfit >= 0 ? netProfit : 0))}</div>
+                            <div className="font-bold border-t border-slate-900 grid grid-cols-12 text-sm bg-slate-50 mt-auto">
+                                <div className="col-span-8 p-2 text-right border-r border-slate-300">Total</div>
+                                <div className="col-span-4 p-2 text-right font-mono">{formatMoney(totalLiabilities + (netProfit >= 0 ? netProfit : 0))}</div>
                             </div>
                         </div>
 
                         {/* Assets Side */}
                         <div className="flex flex-col">
-                            <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-5 text-sm">
-                                <div className="col-span-1 p-2 border-r border-slate-300">Code</div>
-                                <div className="col-span-3 p-2 border-r border-slate-300">Assets</div>
-                                <div className="p-2 text-right">Amount</div>
+                            <div className="bg-slate-50 font-bold border-b border-slate-900 grid grid-cols-12 text-sm">
+                                <div className="col-span-2 p-2 border-r border-slate-300">Code</div>
+                                <div className="col-span-6 p-2 border-r border-slate-300">Assets</div>
+                                <div className="col-span-4 p-2 text-right">Amount</div>
                             </div>
                             <div className="flex-1 flex flex-col">
                                 {assets.map(a => (
-                                    <div key={a.code} className="grid grid-cols-5 text-sm text-slate-700">
-                                        <div className="col-span-1 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{a.code}</div>
-                                        <div className="col-span-3 p-2 border-r border-slate-300">{a.description}</div>
-                                        <div className="p-2 text-right font-mono">{formatMoney(a.amount)}</div>
+                                    <div key={a.code} className="grid grid-cols-12 text-sm text-slate-700">
+                                        <div className="col-span-2 p-2 font-mono text-xs border-r border-slate-300 flex items-center">{a.code}</div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">{a.description}</div>
+                                        <div className="col-span-4 p-2 text-right font-mono">{formatMoney(a.amount)}</div>
                                     </div>
                                 ))}
 
                                 {/* Filler to extend vertical borders */}
-                                <div className="grid grid-cols-5 flex-1">
-                                    <div className="col-span-1 border-r border-slate-300"></div>
-                                    <div className="col-span-3 border-r border-slate-300"></div>
-                                    <div></div>
+                                <div className="grid grid-cols-12 flex-1">
+                                    <div className="col-span-2 border-r border-slate-300"></div>
+                                    <div className="col-span-6 border-r border-slate-300"></div>
+                                    <div className="col-span-4"></div>
                                 </div>
                                 {netProfit < 0 && (
-                                    <div className="grid grid-cols-5 text-sm font-bold text-slate-900 border-t border-slate-300">
-                                        <div className="col-span-1 p-2 border-r border-slate-300"></div>
-                                        <div className="col-span-3 p-2 border-r border-slate-300">Net Loss for the year</div>
-                                        <div className="p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
+                                    <div className="grid grid-cols-12 text-sm font-bold text-slate-900 border-t border-slate-300">
+                                        <div className="col-span-2 p-2 border-r border-slate-300"></div>
+                                        <div className="col-span-6 p-2 border-r border-slate-300">Net Loss for the year</div>
+                                        <div className="col-span-4 p-2 text-right font-mono">{formatMoney(Math.abs(netProfit))}</div>
                                     </div>
                                 )}
                             </div>
-                            <div className="font-bold border-t border-slate-900 grid grid-cols-5 text-sm bg-slate-50 mt-auto">
-                                <div className="col-span-4 p-2 text-right border-r border-slate-300">Total</div>
-                                <div className="p-2 text-right font-mono">{formatMoney(totalAssets + (netProfit < 0 ? Math.abs(netProfit) : 0))}</div>
+                            <div className="font-bold border-t border-slate-900 grid grid-cols-12 text-sm bg-slate-50 mt-auto">
+                                <div className="col-span-8 p-2 text-right border-r border-slate-300">Total</div>
+                                <div className="col-span-4 p-2 text-right font-mono">{formatMoney(totalAssets + (netProfit < 0 ? Math.abs(netProfit) : 0))}</div>
                             </div>
                         </div>
                     </div>

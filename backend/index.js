@@ -424,7 +424,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
           let dr = 0;
           let cr = 0;
 
-          const isIncomeOrExpenditure = code.classification.toLowerCase().includes('income') || code.classification.toLowerCase().includes('expenditure');
+          const isIncomeOrExpenditure = code.classification.toLowerCase().includes('income') || code.classification.toLowerCase().includes('expenditure') || code.classification.toLowerCase().includes('expense');
 
           // Filter lines for this code
           const codeLines = lines.filter(l => l.code_number === code.code_number);

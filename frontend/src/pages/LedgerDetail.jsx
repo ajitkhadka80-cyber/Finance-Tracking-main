@@ -84,12 +84,13 @@ export default function LedgerDetail() {
 
     const classification = (ledgerData?.code?.classification || '').toLowerCase();
     const isAssetOrExpense = classification.includes('asset') || classification.includes('expenditure') || classification.includes('expense');
+    const isNominal = classification.includes('income') || classification.includes('expenditure') || classification.includes('expense');
 
     // Calculate opening balance (all transactions before selected fiscal year)
     let openingDr = 0;
     let openingCr = 0;
 
-    if (selectedFY) {
+    if (selectedFY && !isNominal) {
         allTxs.forEach(tx => {
             const txDate = tx.date ? tx.date.split(' ')[0] : '';
             if (txDate && txDate < selectedFY.start_date) {
