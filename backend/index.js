@@ -452,12 +452,12 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
 
           const classification = code.classification.toLowerCase();
 
-          if (classification.includes('asset') || classification.includes('expenditure')) {
-            balance = dr - cr;
+          if (classification.includes('asset') || classification.includes('expenditure') || classification.includes('expense')) {
+            balance = Math.round((dr - cr) * 100) / 100;
             if (balance > 0) displayDr = balance;
             else if (balance < 0) displayCr = Math.abs(balance);
           } else {
-            balance = cr - dr;
+            balance = Math.round((cr - dr) * 100) / 100;
             if (balance > 0) displayCr = balance;
             else if (balance < 0) displayDr = Math.abs(balance);
           }
@@ -470,12 +470,13 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
               debit: displayDr,
               credit: displayCr
             });
-            totalDr += displayDr;
-            totalCr += displayCr;
+            totalDr = Math.round((totalDr + displayDr) * 100) / 100;
+            totalCr = Math.round((totalCr + displayCr) * 100) / 100;
           }
         }
 
         // Add Prior Years Profit / Retained Earnings if it exists
+        priorYearsProfit = Math.round(priorYearsProfit * 100) / 100;
         if (priorYearsProfit !== 0) {
           let displayDr = 0;
           let displayCr = 0;
@@ -492,8 +493,8 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
             debit: displayDr,
             credit: displayCr
           });
-          totalDr += displayDr;
-          totalCr += displayCr;
+          totalDr = Math.round((totalDr + displayDr) * 100) / 100;
+          totalCr = Math.round((totalCr + displayCr) * 100) / 100;
         }
 
         res.json({
@@ -801,7 +802,7 @@ app.put('/api/transactions/:id', authenticateToken, async (req, res) => {
   }
 
   try {
-    await validateBalances(db, lines, id);
+    await validateBalances(db, lines, parseInt(id, 10));
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }
