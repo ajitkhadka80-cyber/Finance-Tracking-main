@@ -50,7 +50,7 @@ export default function App() {
           <Route 
             path="/transactions/edit/:id" 
             element={
-              <ProtectedRoute requireAdmin={true}>
+              <ProtectedRoute>
                 <Transactions />
               </ProtectedRoute>
             } 

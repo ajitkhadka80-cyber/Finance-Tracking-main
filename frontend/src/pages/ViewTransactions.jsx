@@ -25,6 +25,7 @@ export default function ViewTransactions() {
     const [fiscalYears, setFiscalYears] = useState([]);
     const [activeFiscalYearId, setActiveFiscalYearId] = useState('all');
     const [filterMonthStr, setFilterMonthStr] = useState('');
+    const [selectedTxIds, setSelectedTxIds] = useState([]);
 
     // Modal State
     const [viewTx, setViewTx] = useState(null);
@@ -93,7 +94,7 @@ export default function ViewTransactions() {
 
     const formatMoney = (val) => {
         const num = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
-        return `${currency || '$'}${num}`;
+        return num;
     };
 
     const formatDateTime = (dateStr) => {
@@ -184,6 +185,160 @@ export default function ViewTransactions() {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    const handlePost = async (tx) => {
+        const confirm = await Swal.fire({
+            title: 'Post Voucher?',
+            text: "Are you sure you want to post this voucher?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, post it!'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const res = await fetch(`/api/transactions/${tx.id}/post`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                fetchTransactions();
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Transaction Posted', showConfirmButton: false, timer: 3000 });
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.error || 'Failed to post transaction', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Failed to connect to the server.', 'error');
+        }
+    };
+
+    const handleUnpost = async (tx) => {
+        const confirm = await Swal.fire({
+            title: 'Unpost Voucher?',
+            text: "Are you sure you want to unpost this voucher?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f97316',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, unpost it!'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const res = await fetch(`/api/transactions/${tx.id}/unpost`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                fetchTransactions();
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Transaction Unposted', showConfirmButton: false, timer: 3000 });
+            } else {
+                const err = await res.json();
+                Swal.fire('Error', err.error || 'Failed to unpost transaction', 'error');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Failed to connect to the server.', 'error');
+        }
+    };
+
+    const handlePostSelected = async () => {
+        const idsToPost = selectedTxIds.filter(id => {
+            const tx = transactions.find(t => t.id === id);
+            return tx && !tx.is_posted;
+        });
+
+        if (idsToPost.length === 0) {
+            Swal.fire('Info', 'No unposted vouchers selected to post.', 'info');
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            title: 'Post Selected?',
+            text: `Are you sure you want to post ${idsToPost.length} unposted vouchers?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, post them!'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            let successCount = 0;
+            for (const id of idsToPost) {
+                const res = await fetch(`/api/transactions/${id}/post`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) successCount++;
+            }
+            fetchTransactions();
+            setSelectedTxIds([]);
+            Swal.fire('Posted!', `Successfully posted ${successCount} vouchers.`, 'success');
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Failed to post selected vouchers.', 'error');
+        }
+    };
+
+    const handleUnpostSelected = async () => {
+        const idsToUnpost = selectedTxIds.filter(id => {
+            const tx = transactions.find(t => t.id === id);
+            return tx && tx.is_posted;
+        });
+
+        if (idsToUnpost.length === 0) {
+            Swal.fire('Info', 'No posted vouchers selected to unpost.', 'info');
+            return;
+        }
+
+        const confirm = await Swal.fire({
+            title: 'Unpost Selected?',
+            text: `Are you sure you want to unpost ${idsToUnpost.length} posted vouchers?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#f97316',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'Yes, unpost them!'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            let successCount = 0;
+            for (const id of idsToUnpost) {
+                const res = await fetch(`/api/transactions/${id}/unpost`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) successCount++;
+            }
+            fetchTransactions();
+            setSelectedTxIds([]);
+            Swal.fire('Unposted!', `Successfully unposted ${successCount} vouchers.`, 'success');
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Error', 'Failed to unpost selected vouchers.', 'error');
+        }
+    };
+
+    const toggleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedTxIds(filteredTransactions.map(tx => tx.id));
+        } else {
+            setSelectedTxIds([]);
+        }
+    };
+
+    const toggleSelectRow = (txId) => {
+        setSelectedTxIds(prev => 
+            prev.includes(txId) ? prev.filter(id => id !== txId) : [...prev, txId]
+        );
     };
 
     const handleDeleteTransaction = async (tx) => {
@@ -452,29 +607,68 @@ export default function ViewTransactions() {
                     </section>
 
                     <section className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm space-y-5">
-                        {/* Fiscal Year Tabs */}
-                        <div className="flex space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
-                            <button
-                                onClick={() => setActiveFiscalYearId('all')}
-                                className={`px-4 py-2 rounded-t-lg text-sm font-medium whitespace-nowrap transition-colors ${activeFiscalYearId === 'all' ? 'bg-brand-50 text-brand-700 border-b-2 border-brand-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
-                            >
-                                All Fiscal Years
-                            </button>
-                            {fiscalYears.map(fy => (
-                                <button
-                                    key={fy.id}
-                                    onClick={() => setActiveFiscalYearId(fy.id)}
-                                    className={`px-4 py-2 rounded-t-lg text-sm font-medium whitespace-nowrap transition-colors ${activeFiscalYearId === fy.id ? 'bg-brand-50 text-brand-700 border-b-2 border-brand-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pb-2 border-b border-slate-200">
+                            <div className="flex items-center gap-2">
+                                <label className="text-sm font-semibold text-slate-600">Fiscal Year:</label>
+                                <select
+                                    value={activeFiscalYearId}
+                                    onChange={(e) => {
+                                        setActiveFiscalYearId(e.target.value === 'all' ? 'all' : Number(e.target.value));
+                                        setSelectedTxIds([]);
+                                    }}
+                                    className="bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-brand-500"
                                 >
-                                    {fy.name}
+                                    <option value="all">All Fiscal Years</option>
+                                    {fiscalYears.map(fy => (
+                                        <option key={fy.id} value={fy.id}>{fy.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        if (selectedTxIds.length === filteredTransactions.length && filteredTransactions.length > 0) {
+                                            setSelectedTxIds([]);
+                                        } else {
+                                            setSelectedTxIds(filteredTransactions.map(tx => tx.id));
+                                        }
+                                    }}
+                                    className="px-3 py-1.5 text-sm font-medium border border-slate-300 rounded hover:bg-slate-50 text-slate-700 transition-colors"
+                                >
+                                    {selectedTxIds.length === filteredTransactions.length && filteredTransactions.length > 0 ? 'Deselect All' : 'Select All'}
                                 </button>
-                            ))}
+                                <button
+                                    onClick={handlePostSelected}
+                                    disabled={selectedTxIds.length === 0}
+                                    className="px-3 py-1.5 text-sm font-medium bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                                >
+                                    Post Selected ({selectedTxIds.length})
+                                </button>
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={handleUnpostSelected}
+                                        disabled={selectedTxIds.length === 0}
+                                        className="px-3 py-1.5 text-sm font-medium bg-orange-600 text-white rounded hover:bg-orange-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                        Unpost Selected ({selectedTxIds.length})
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="overflow-x-auto w-full">
                             <table className="w-full text-left text-sm">
                                 <thead>
                                     <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                        <th className="py-3 px-3 w-10 text-center">
+                                            <input 
+                                                type="checkbox" 
+                                                className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer w-4 h-4"
+                                                checked={selectedTxIds.length === filteredTransactions.length && filteredTransactions.length > 0}
+                                                onChange={toggleSelectAll}
+                                            />
+                                        </th>
                                         <th className="py-3 px-3">Date</th>
                                         <th className="py-3 px-3">Posted At</th>
                                         <th className="py-3 px-3">SN</th>
@@ -489,6 +683,14 @@ export default function ViewTransactions() {
 
 
                                         <tr className="hover:bg-slate-50/50 transition-colors" key={tx.id}>
+                                            <td className="px-3 py-4 text-center">
+                                                <input 
+                                                    type="checkbox"
+                                                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer w-4 h-4"
+                                                    checked={selectedTxIds.includes(tx.id)}
+                                                    onChange={() => toggleSelectRow(tx.id)}
+                                                />
+                                            </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-900">
                                                 <div className="font-medium text-slate-800">{receiptLanguage === 'english' ? (tx.date ? tx.date.split(' ')[0] : '') : toNepaliDigits(tx.date ? tx.date.split(' ')[0] : '')}</div>
                                             </td>
@@ -518,13 +720,25 @@ export default function ViewTransactions() {
                                             </td>
                                             <td className="px-3 py-4 whitespace-nowrap text-center text-sm">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => openViewModal(tx)}
-                                                        className="p-1.5 text-brand-600 hover:bg-brand-50 rounded transition-colors"
-                                                        title="View Details"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">visibility</span>
-                                                    </button>
+                                                    {!tx.is_posted ? (
+                                                        <button
+                                                            onClick={() => handlePost(tx)}
+                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                                            title="Post Transaction"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                        </button>
+                                                    ) : (
+                                                        user?.role === 'admin' && (
+                                                            <button
+                                                                onClick={() => handleUnpost(tx)}
+                                                                className="p-1.5 text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                                                                title="Unpost Transaction"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                                            </button>
+                                                        )
+                                                    )}
                                                     <button
                                                         onClick={() => handleDownload(tx)}
                                                         className="p-1.5 text-slate-600 hover:bg-slate-100 rounded transition-colors"
@@ -532,30 +746,30 @@ export default function ViewTransactions() {
                                                     >
                                                         <span className="material-symbols-outlined text-[18px]">print</span>
                                                     </button>
-                                                    {user?.role === 'admin' && (
-                                                        <>
-                                                            <Link
-                                                                to={`/transactions/edit/${tx.id}`}
-                                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                                                title="Edit Transaction"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                            </Link>
-                                                            <button
-                                                                onClick={() => handleDeleteTransaction(tx)}
-                                                                className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                                                                title="Delete Transaction"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                            </button>
-                                                        </>
+                                                    {!tx.is_posted && (
+                                                        <Link
+                                                            to={`/transactions/edit/${tx.id}`}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                            title="Edit Transaction"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                        </Link>
+                                                    )}
+                                                    {user?.role === 'admin' && !tx.is_posted && (
+                                                        <button
+                                                            onClick={() => handleDeleteTransaction(tx)}
+                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                                                            title="Delete Transaction"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
                                                     )}
                                                 </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {filteredTransactions.length === 0 && (
-                                        <tr><td colSpan="7" className="px-5 py-8 text-center text-slate-500">No transactions found</td></tr>
+                                        <tr><td colSpan="8" className="px-5 py-8 text-center text-slate-500">No transactions found</td></tr>
                                     )}
                                 </tbody>
                             </table>

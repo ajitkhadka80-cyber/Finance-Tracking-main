@@ -12,4 +12,8 @@ db.serialize(() => {
     if (err) console.log(err.message);
     else console.log("Added modified_at");
   });
+  db.run("ALTER TABLE transactions ADD COLUMN is_posted BOOLEAN DEFAULT 0", (err) => {
+    if (err) console.log(err.message);
+    else console.log("Added is_posted");
+  });
 });

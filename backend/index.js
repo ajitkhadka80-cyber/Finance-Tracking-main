@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
@@ -339,7 +339,7 @@ app.put('/api/settings', authenticateToken, requireAdmin, (req, res) => {
 // === PUBLIC STATS ===
 app.get('/api/public/stats', (req, res) => {
   // Returns aggregated, anonymous stats for the login page charts
-  db.all("SELECT * FROM transactions", [], (err, txs) => {
+  db.all("SELECT * FROM transactions WHERE is_posted = 1", [], (err, txs) => {
     if (err) return res.status(500).json({ error: err.message });
 
     db.all("SELECT * FROM transaction_lines", [], (err, lines) => {
@@ -409,7 +409,7 @@ app.get('/api/reports/trial-balance', authenticateToken, (req, res) => {
         SELECT t.date, tl.code_number, tl.type, tl.amount 
         FROM transaction_lines tl
         JOIN transactions t ON tl.transaction_id = t.id
-        WHERE t.date <= ?
+        WHERE t.date <= ? AND t.is_posted = 1
       `;
 
       db.all(txQuery, [cutoffDate], (err, lines) => {
@@ -609,7 +609,7 @@ app.get('/api/ledger/:code', authenticateToken, (req, res) => {
       SELECT t.date, t.sn, t.final_description, tl.type, tl.amount 
       FROM transaction_lines tl
       JOIN transactions t ON tl.transaction_id = t.id
-      WHERE tl.code_number = ?
+      WHERE tl.code_number = ? AND t.is_posted = 1
       ORDER BY t.date ASC, CAST(t.sn AS INTEGER) ASC, t.id ASC
     `;
 
@@ -801,62 +801,84 @@ app.put('/api/transactions/:id', authenticateToken, async (req, res) => {
     return res.status(400).json({ error: 'Missing required fields or lines' });
   }
 
-  try {
-    await validateBalances(db, lines, parseInt(id, 10));
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
-  }
-
-  const txDateStr = date.split(' ')[0];
-  db.get("SELECT start_date, end_date FROM fiscal_years WHERE is_current = 1", [], (err, activeFy) => {
+  db.get("SELECT is_posted FROM transactions WHERE id = ?", [id], async (err, txRow) => {
     if (err) return res.status(500).json({ error: err.message });
-    if (!activeFy) return res.status(400).json({ error: 'No active fiscal year found' });
+    if (!txRow) return res.status(404).json({ error: 'Transaction not found' });
+    if (txRow.is_posted) return res.status(400).json({ error: 'Cannot edit a posted transaction' });
 
-    if (txDateStr < activeFy.start_date || txDateStr > activeFy.end_date) {
-      return res.status(400).json({ error: 'Transactions can only be posted in the active fiscal year' });
+    try {
+      await validateBalances(db, lines, parseInt(id, 10));
+    } catch (err) {
+      return res.status(400).json({ error: err.message });
     }
 
-    let duplicateQuery = "SELECT id FROM transactions WHERE sn = ? AND id != ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?";
-    let duplicateParams = [sn, id, activeFy.start_date, activeFy.end_date];
-
-    db.get(duplicateQuery, duplicateParams, (err, row) => {
+    const txDateStr = date.split(' ')[0];
+    db.get("SELECT start_date, end_date FROM fiscal_years WHERE is_current = 1", [], (err, activeFy) => {
       if (err) return res.status(500).json({ error: err.message });
-      if (row) return res.status(400).json({ error: 'Duplicate voucher Number' });
+      if (!activeFy) return res.status(400).json({ error: 'No active fiscal year found' });
 
-      db.serialize(() => {
-        db.run("BEGIN TRANSACTION");
-        const modified_at = new Date().toISOString();
-        db.run(`UPDATE transactions SET sn = ?, date = ?, final_description = ?, modified_by = ?, modified_at = ? WHERE id = ?`,
-          [sn, date, final_description, req.user.name, modified_at, id],
-          function (err) {
-            if (err) {
-              db.run("ROLLBACK");
-              return res.status(500).json({ error: err.message });
-            }
+      if (txDateStr < activeFy.start_date || txDateStr > activeFy.end_date) {
+        return res.status(400).json({ error: 'Transactions can only be posted in the active fiscal year' });
+      }
 
-            db.run("DELETE FROM transaction_lines WHERE transaction_id = ?", [id], function (err) {
+      let duplicateQuery = "SELECT id FROM transactions WHERE sn = ? AND id != ? AND substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?";
+      let duplicateParams = [sn, id, activeFy.start_date, activeFy.end_date];
+
+      db.get(duplicateQuery, duplicateParams, (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (row) return res.status(400).json({ error: 'Duplicate voucher Number' });
+
+        db.serialize(() => {
+          db.run("BEGIN TRANSACTION");
+          const modified_at = new Date().toISOString();
+          db.run(`UPDATE transactions SET sn = ?, date = ?, final_description = ?, modified_by = ?, modified_at = ? WHERE id = ?`,
+            [sn, date, final_description, req.user.name, modified_at, id],
+            function (err) {
               if (err) {
                 db.run("ROLLBACK");
                 return res.status(500).json({ error: err.message });
               }
 
-              const stmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
-              for (const line of lines) {
-                stmt.run(id, line.code_number, line.type, line.amount, (err) => {
-                  if (err) console.error("Error inserting line:", err);
-                });
-              }
-              stmt.finalize();
+              db.run("DELETE FROM transaction_lines WHERE transaction_id = ?", [id], function (err) {
+                if (err) {
+                  db.run("ROLLBACK");
+                  return res.status(500).json({ error: err.message });
+                }
 
-              db.run("COMMIT", (err) => {
-                if (err) return res.status(500).json({ error: "Commit failed" });
-                res.json({ success: true, transaction_id: id });
+                const stmt = db.prepare("INSERT INTO transaction_lines (transaction_id, code_number, type, amount) VALUES (?, ?, ?, ?)");
+                for (const line of lines) {
+                  stmt.run(id, line.code_number, line.type, line.amount, (err) => {
+                    if (err) console.error("Error inserting line:", err);
+                  });
+                }
+                stmt.finalize();
+
+                db.run("COMMIT", (err) => {
+                  if (err) return res.status(500).json({ error: "Commit failed" });
+                  res.json({ success: true, transaction_id: id });
+                });
               });
-            });
-          }
-        );
+            }
+          );
+        });
       });
     });
+  });
+});
+
+app.post('/api/transactions/:id/post', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  db.run("UPDATE transactions SET is_posted = 1 WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Transaction posted successfully' });
+  });
+});
+
+app.post('/api/transactions/:id/unpost', authenticateToken, requireAdmin, (req, res) => {
+  const { id } = req.params;
+  db.run("UPDATE transactions SET is_posted = 0 WHERE id = ?", [id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, message: 'Transaction unposted successfully' });
   });
 });
 

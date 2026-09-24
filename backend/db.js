@@ -63,6 +63,7 @@ db.serialize(() => {
     created_by TEXT,
     modified_by TEXT,
     modified_at TEXT,
+    is_posted BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
